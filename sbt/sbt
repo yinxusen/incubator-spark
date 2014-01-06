@@ -22,7 +22,7 @@ case "`uname`" in
     CYGWIN*) cygwin=true;;
 esac
 
-EXTRA_ARGS="-Xmx1200m -XX:MaxPermSize=350m -XX:ReservedCodeCacheSize=256m"
+EXTRA_ARGS="-Xmx1200m -XX:MaxPermSize=350m -XX:ReservedCodeCacheSize=256m -DsocksProxyHost=10.7.211.16 -DsocksProxyPort=1080"
 if [ "$MESOS_HOME" != "" ]; then
   EXTRA_ARGS="$EXTRA_ARGS -Djava.library.path=$MESOS_HOME/lib/java"
 fi

@@ -34,7 +34,7 @@ import org.jblas.DoubleMatrix
  * @param weights Weights computed for every feature.
  * @param intercept Intercept computed for this model.
  */
-class LogisticRegressionModel(
+class LogisticRegressionModelAlt(
     override val weights: Array[Double],
     override val intercept: Double)
   extends GeneralizedLinearModel(weights, intercept)
@@ -51,17 +51,17 @@ class LogisticRegressionModel(
  * Train a classification model for Logistic Regression using Stochastic Gradient Descent.
  * NOTE: Labels used in Logistic Regression should be {0, 1}
  */
-class LogisticRegressionWithSGD private (
+class LogisticRegressionWithSGDAlt private (
     var stepSize: Double,
     var numIterations: Int,
     var regParam: Double,
     var miniBatchFraction: Double)
-  extends GeneralizedLinearAlgorithm[LogisticRegressionModel]
+  extends GeneralizedLinearAlgorithm[LogisticRegressionModelAlt]
   with Serializable {
 
   val gradient = new LogisticGradient()
   val updater = new SimpleUpdater()
-  override val optimizer = new GradientDescent(gradient, updater)
+  override val optimizer = new GradientDescentAlt(gradient, updater)
       .setStepSize(stepSize)
       .setNumIterations(numIterations)
       .setRegParam(regParam)
@@ -74,7 +74,7 @@ class LogisticRegressionWithSGD private (
   def this() = this(1.0, 100, 0.0, 1.0)
 
   def createModel(weights: Array[Double], intercept: Double) = {
-    new LogisticRegressionModel(weights, intercept)
+    new LogisticRegressionModelAlt(weights, intercept)
   }
 }
 
@@ -82,7 +82,7 @@ class LogisticRegressionWithSGD private (
  * Top-level methods for calling Logistic Regression.
  * NOTE: Labels used in Logistic Regression should be {0, 1}
  */
-object LogisticRegressionWithSGD {
+object LogisticRegressionWithSGDAlt {
   // NOTE(shivaram): We use multiple train methods instead of default arguments to support
   // Java programs.
 
@@ -106,9 +106,9 @@ object LogisticRegressionWithSGD {
       stepSize: Double,
       miniBatchFraction: Double,
       initialWeights: Array[Double])
-    : LogisticRegressionModel =
+    : LogisticRegressionModelAlt =
   {
-    new LogisticRegressionWithSGD(stepSize, numIterations, 0.0, miniBatchFraction).run(
+    new LogisticRegressionWithSGDAlt(stepSize, numIterations, 0.0, miniBatchFraction).run(
       input, initialWeights)
   }
 
@@ -129,9 +129,9 @@ object LogisticRegressionWithSGD {
       numIterations: Int,
       stepSize: Double,
       miniBatchFraction: Double)
-    : LogisticRegressionModel =
+    : LogisticRegressionModelAlt =
   {
-    new LogisticRegressionWithSGD(stepSize, numIterations, 0.0, miniBatchFraction).run(
+    new LogisticRegressionWithSGDAlt(stepSize, numIterations, 0.0, miniBatchFraction).run(
       input)
   }
 
@@ -151,7 +151,7 @@ object LogisticRegressionWithSGD {
       input: RDD[LabeledPoint],
       numIterations: Int,
       stepSize: Double)
-    : LogisticRegressionModel =
+    : LogisticRegressionModelAlt =
   {
     train(input, numIterations, stepSize, 1.0)
   }
@@ -169,7 +169,7 @@ object LogisticRegressionWithSGD {
   def train(
       input: RDD[LabeledPoint],
       numIterations: Int)
-    : LogisticRegressionModel =
+    : LogisticRegressionModelAlt =
   {
     train(input, numIterations, 1.0, 1.0)
   }
@@ -183,7 +183,7 @@ object LogisticRegressionWithSGD {
     val sc = new SparkContext(args(0), "LogisticRegression")
     val data = MLUtils.loadLabeledData(sc, args(1))
     val begin = System.nanoTime
-    val model = LogisticRegressionWithSGD.train(data, args(3).toInt, args(2).toDouble)
+    val model = LogisticRegressionWithSGDAlt.train(data, args(3).toInt, args(2).toDouble)
     val end = System.nanoTime
     println(s"total ${end-begin}")
     println(model.weights)
