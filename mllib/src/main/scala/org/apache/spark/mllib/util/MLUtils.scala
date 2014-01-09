@@ -48,6 +48,19 @@ object MLUtils {
     }
   }
 
+  def loadSparseLabeledData(sc: SparkContext, dir: String, D: Int): RDD[LabeledPoint] = {
+    sc.textFile(dir).map { line =>
+      val parts = line.split(' ')
+      val label = if(parts(0).toInt == -1) 0.0 else 1.0
+      val features = new Array[Double](D)
+      for(ix <- parts.tail) {
+        val pair = ix.split(':')
+        features(pair(0).toInt) = pair(1).toDouble
+      }
+      LabeledPoint(label, features)
+    }
+  }
+
   /**
    * Save labeled data to a file. The data format used here is
    * <L>, <f1> <f2> ...
