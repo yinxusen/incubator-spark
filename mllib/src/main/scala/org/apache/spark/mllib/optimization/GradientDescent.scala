@@ -197,7 +197,7 @@ object GradientDescent extends Logging {
           regVal = update._2
         }
 
-        Seq((weights, localLossHistory.toArray)).toIterator
+        Seq((weights, localLossHistory.toArray)).iterator
       }
 
       val c = x.collect()
