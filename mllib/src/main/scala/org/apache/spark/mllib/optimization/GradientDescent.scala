@@ -159,8 +159,8 @@ object GradientDescent extends Logging {
       gradient: Gradient,
       updater: Updater,
       stepSize: Double,
-      numInnerIterations: Int,
       numOuterIterations: Int,
+      numInnerIterations: Int,
       regParam: Double,
       miniBatchFraction: Double,
       initialWeights: Array[Double]) : (Array[Double], Array[Double]) = {
