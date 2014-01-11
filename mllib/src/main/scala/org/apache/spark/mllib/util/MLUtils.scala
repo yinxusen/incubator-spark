@@ -48,8 +48,8 @@ object MLUtils {
     }
   }
 
-  def loadSparseLabeledData(sc: SparkContext, dir: String, D: Int): RDD[LabeledPoint] = {
-    sc.textFile(dir).map { line =>
+  def loadSparseLabeledData(sc: SparkContext, dir: String, D: Int, miniSplit: Int): RDD[LabeledPoint] = {
+    sc.textFile(dir, miniSplit).map { line =>
       val parts = line.split(' ')
       val label = if(parts(0).toInt == -1) 0.0 else 1.0
       val features = new Array[Double](D)

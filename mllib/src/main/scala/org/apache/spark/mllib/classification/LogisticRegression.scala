@@ -175,14 +175,14 @@ object LogisticRegressionWithSGD {
   }
 
   def main(args: Array[String]) {
-    if (args.length != 4) {
+    if (args.length != 5) {
       println("Usage: LogisticRegression <master> <input_dir> <step_size> " +
-        "<niters>")
+        "<niters> <mini-split>")
       System.exit(1)
     }
     val sc = new SparkContext(args(0), "LogisticRegression")
     // val data = MLUtils.loadLabeledData(sc, args(1))
-    val data = MLUtils.loadSparseLabeledData(sc, args(1), 255)
+    val data = MLUtils.loadSparseLabeledData(sc, args(1), 255, args(4).toInt)
     val begin = System.nanoTime
     val model = LogisticRegressionWithSGD.train(data, args(3).toInt, args(2).toDouble)
     val end = System.nanoTime
