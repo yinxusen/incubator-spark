@@ -111,6 +111,23 @@ class GradientDescent(var gradient: Gradient, var updater: Updater)
 
 // Top-level method to run gradient descent.
 object GradientDescent extends Logging {
+   /**
+   * Run BSP+ gradient descent in parallel using mini batches.
+   *
+   * @param data - Input data for SGD. RDD of form (label, [feature values]).
+   * @param gradient - Gradient object that will be used to compute the gradient.
+   * @param updater - Updater object that will be used to update the model.
+   * @param stepSize - stepSize to be used during update.
+   * @param numOuterIterations - number of outer iterations that SGD should be run.
+   * @param numInnerIterations - number of inner iterations that SGD should be run.
+   * @param regParam - regularization parameter
+   * @param miniBatchFraction - fraction of the input data set that should be used for
+   *                            one iteration of SGD. Default value 1.0.
+   *
+   * @return A tuple containing two elements. The first element is a column matrix containing
+   *         weights for every feature, and the second element is an array containing the stochastic
+   *         loss computed for every iteration.
+   */
   def runMiniBatchSGD(
       data: RDD[(Double, Array[Double])],
       gradient: Gradient,
