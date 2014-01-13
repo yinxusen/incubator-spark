@@ -76,7 +76,8 @@ class GradientDescentSuite extends FunSuite with LocalSparkContext with ShouldMa
     val gradient = new LogisticGradient()
     val updater = new SimpleUpdater()
     val stepSize = 1.0
-    val numIterations = 10
+    val numInnerIterations = 20
+    val numOuterIterations = 2
     val regParam = 0
     val miniBatchFrac = 1.0
 
@@ -94,7 +95,8 @@ class GradientDescentSuite extends FunSuite with LocalSparkContext with ShouldMa
       gradient,
       updater,
       stepSize,
-      numIterations,
+      numOuterIterations,
+      numInnerIterations,
       regParam,
       miniBatchFrac,
       initialWeightsWithIntercept)

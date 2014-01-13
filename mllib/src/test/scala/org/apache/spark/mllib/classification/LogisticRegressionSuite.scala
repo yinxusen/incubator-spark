@@ -120,7 +120,7 @@ class LogisticRegressionSuite extends FunSuite with LocalSparkContext with Shoul
 
     // Use half as many iterations as the previous test.
     val lr = new LogisticRegressionWithSGD()
-    lr.optimizer.setStepSize(10.0).setNumIterations(10)
+    lr.optimizer.setStepSize(10.0).setNumIterations(100)
 
     val model = lr.run(testRDD, initialWeights)
 
