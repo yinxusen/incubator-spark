@@ -35,7 +35,7 @@ class GradientDescent(var gradient: Gradient, var updater: Updater)
 {
   private var stepSize: Double = 1.0
   private var numIterations: Int = 100
-  private val numOuterIterations: Int = 20
+  private val numInnerIterations: Int = 20
   private var regParam: Double = 0.0
   private var miniBatchFraction: Double = 1.0
 
@@ -91,15 +91,15 @@ class GradientDescent(var gradient: Gradient, var updater: Updater)
   def optimize(data: RDD[(Double, Array[Double])], initialWeights: Array[Double])
     : Array[Double] = {
 
-    assert(numIterations >= numOuterIterations)
+    assert(numIterations >= numInnerIterations)
 
     val (weights, stochasticLossHistory) = GradientDescent.runMiniBatchSGD(
         data,
         gradient,
         updater,
         stepSize,
-        numOuterIterations,
-        numIterations / numOuterIterations,
+        numIterations / numInnerIterations,
+        numInnerIterations,
         regParam,
         miniBatchFraction,
         initialWeights)
@@ -167,9 +167,9 @@ object GradientDescent extends Logging {
 
     val stochasticLossHistory = new ArrayBuffer[Double](numOuterIterations)
 
-    val nexamples: Long = data.count()
+    val numExamples: Long = data.count()
     val numPartition = data.partitions.length
-    val miniBatchSize = nexamples * miniBatchFraction / numPartition
+    val miniBatchSize = numExamples * miniBatchFraction / numPartition
 
     // Initialize weights as a column vector
     var weights = new DoubleMatrix(initialWeights.length, 1, initialWeights: _*)
@@ -178,14 +178,16 @@ object GradientDescent extends Logging {
     val timeArray = new ArrayBuffer[Long](numOuterIterations)
     for (i <- 1 to numOuterIterations) {
       val begin = System.nanoTime
-      val x = data.mapPartitions { iter =>
-        val xxx = iter.toArray
+      val weightsAndLosses = data.mapPartitions { currentPartitionIterator =>
+        val currentPartitionData = currentPartitionIterator.toArray
 
         val localLossHistory = new ArrayBuffer[Double](numInnerIterations)
 
         for (j <- 1 to numInnerIterations) {
           val rand = new Random(42 + i * numOuterIterations + j)
-          val (gradientSum, lossSum) = xxx.filter(x => rand.nextDouble() <= miniBatchFraction).map { case (y, features) =>
+          val (gradientSum, lossSum) = currentPartitionData
+            .filter(x => rand.nextDouble() <= miniBatchFraction)
+            .map { case (y, features) =>
             val featuresCol = new DoubleMatrix(features.length, 1, features: _*)
             val (grad, loss) = gradient.compute(featuresCol, y, weights)
             (grad, loss)
@@ -200,10 +202,10 @@ object GradientDescent extends Logging {
         Seq((weights, localLossHistory.toArray)).iterator
       }
 
-      val c = x.collect()
-      val (ws, hs) = c.unzip
+      val c = weightsAndLosses.collect()
+      val (ws, ls) = c.unzip
 
-      stochasticLossHistory.append(hs.head.reduce(_ + _) / hs.head.size)
+      stochasticLossHistory.append(ls.head.reduce(_ + _) / ls.head.size)
 
       val weightsSum = ws.reduce(_ addi _)
       weights = weightsSum.divi(c.size)
