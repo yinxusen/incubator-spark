@@ -185,7 +185,7 @@ object GradientDescent extends Logging {
     }
 
     logInfo("GradientDescent finished. Last 10 stochastic losses %s".format(
-      stochasticLossHistory.mkString(", ")))
+      stochasticLossHistory.takeRight(10).mkString(", ")))
 
     (weights.toArray, stochasticLossHistory.toArray)
   }
