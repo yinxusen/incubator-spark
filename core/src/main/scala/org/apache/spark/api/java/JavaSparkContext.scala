@@ -29,23 +29,36 @@ import org.apache.hadoop.mapred.JobConf
 import org.apache.hadoop.mapreduce.{InputFormat => NewInputFormat}
 import com.google.common.base.Optional
 
-import org.apache.spark.{Accumulable, AccumulableParam, Accumulator, AccumulatorParam, SparkContext}
+import org.apache.spark._
 import org.apache.spark.SparkContext.IntAccumulatorParam
 import org.apache.spark.SparkContext.DoubleAccumulatorParam
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.RDD
 
+
 /**
- * A Java-friendly version of [[org.apache.spark.SparkContext]] that returns [[org.apache.spark.api.java.JavaRDD]]s and
- * works with Java collections instead of Scala ones.
+ * A Java-friendly version of [[org.apache.spark.SparkContext]] that returns
+ * [[org.apache.spark.api.java.JavaRDD]]s and works with Java collections instead of Scala ones.
  */
 class JavaSparkContext(val sc: SparkContext) extends JavaSparkContextVarargsWorkaround {
+  /**
+   * @param conf a [[org.apache.spark.SparkConf]] object specifying Spark parameters
+   */
+  def this(conf: SparkConf) = this(new SparkContext(conf))
 
   /**
    * @param master Cluster URL to connect to (e.g. mesos://host:port, spark://host:port, local[4]).
    * @param appName A name for your application, to display on the cluster web UI
    */
   def this(master: String, appName: String) = this(new SparkContext(master, appName))
+
+  /**
+   * @param master Cluster URL to connect to (e.g. mesos://host:port, spark://host:port, local[4]).
+   * @param appName A name for your application, to display on the cluster web UI
+   * @param conf a [[org.apache.spark.SparkConf]] object specifying other Spark parameters
+   */
+  def this(master: String, appName: String, conf: SparkConf) =
+    this(conf.setMaster(master).setAppName(appName))
 
   /**
    * @param master Cluster URL to connect to (e.g. mesos://host:port, spark://host:port, local[4]).
@@ -124,7 +137,7 @@ class JavaSparkContext(val sc: SparkContext) extends JavaSparkContextVarargsWork
    */
   def textFile(path: String, minSplits: Int): JavaRDD[String] = sc.textFile(path, minSplits)
 
-  /**Get an RDD for a Hadoop SequenceFile with given key and value types. */
+  /** Get an RDD for a Hadoop SequenceFile with given key and value types. */
   def sequenceFile[K, V](path: String,
     keyClass: Class[K],
     valueClass: Class[V],
@@ -135,12 +148,33 @@ class JavaSparkContext(val sc: SparkContext) extends JavaSparkContextVarargsWork
     new JavaPairRDD(sc.sequenceFile(path, keyClass, valueClass, minSplits))
   }
 
-  /**Get an RDD for a Hadoop SequenceFile. */
+  /** Get an RDD for a Hadoop SequenceFile with given key and value types. */
+  def sequenceFile[K, V](path: String,
+    keyClass: Class[K],
+    valueClass: Class[V],
+    minSplits: Int,
+    cloneRecords: Boolean
+    ): JavaPairRDD[K, V] = {
+    implicit val kcm: ClassTag[K] = ClassTag(keyClass)
+    implicit val vcm: ClassTag[V] = ClassTag(valueClass)
+    new JavaPairRDD(sc.sequenceFile(path, keyClass, valueClass, minSplits, cloneRecords))
+  }
+
+  /** Get an RDD for a Hadoop SequenceFile. */
   def sequenceFile[K, V](path: String, keyClass: Class[K], valueClass: Class[V]):
   JavaPairRDD[K, V] = {
     implicit val kcm: ClassTag[K] = ClassTag(keyClass)
     implicit val vcm: ClassTag[V] = ClassTag(valueClass)
     new JavaPairRDD(sc.sequenceFile(path, keyClass, valueClass))
+  }
+
+  /** Get an RDD for a Hadoop SequenceFile. */
+  def sequenceFile[K, V](path: String, keyClass: Class[K], valueClass: Class[V], 
+    cloneRecords: Boolean):
+  JavaPairRDD[K, V] = {
+    implicit val kcm: ClassTag[K] = ClassTag(keyClass)
+    implicit val vcm: ClassTag[V] = ClassTag(valueClass)
+    new JavaPairRDD(sc.sequenceFile(path, keyClass, valueClass, cloneRecords))
   }
 
   /**
@@ -184,6 +218,37 @@ class JavaSparkContext(val sc: SparkContext) extends JavaSparkContextVarargsWork
     new JavaPairRDD(sc.hadoopRDD(conf, inputFormatClass, keyClass, valueClass, minSplits))
   }
 
+
+  /**
+   * Get an RDD for a Hadoop-readable dataset from a Hadoop JobConf given its InputFormat and other
+   * necessary info (e.g. file name for a filesystem-based dataset, table name for HyperTable),
+   * using the older MapReduce API (`org.apache.hadoop.mapred`).
+   *
+   * @param conf JobConf for setting up the dataset
+   * @param inputFormatClass Class of the [[InputFormat]]
+   * @param keyClass Class of the keys
+   * @param valueClass Class of the values
+   * @param minSplits Minimum number of Hadoop Splits to generate.
+   * @param cloneRecords If true, Spark will clone the records produced by Hadoop RecordReader.
+   *                     Most RecordReader implementations reuse wrapper objects across multiple
+   *                     records, and can cause problems in RDD collect or aggregation operations.
+   *                     By default the records are cloned in Spark. However, application
+   *                     programmers can explicitly disable the cloning for better performance.
+   */
+  def hadoopRDD[K, V, F <: InputFormat[K, V]](
+    conf: JobConf,
+    inputFormatClass: Class[F],
+    keyClass: Class[K],
+    valueClass: Class[V],
+    minSplits: Int,
+    cloneRecords: Boolean
+    ): JavaPairRDD[K, V] = {
+    implicit val kcm: ClassTag[K] = ClassTag(keyClass)
+    implicit val vcm: ClassTag[V] = ClassTag(valueClass)
+    new JavaPairRDD(sc.hadoopRDD(conf, inputFormatClass, keyClass, valueClass, minSplits,
+      cloneRecords))
+  }
+
   /**
    * Get an RDD for a Hadoop-readable dataset from a Hadooop JobConf giving its InputFormat and any
    * other necessary info (e.g. file name for a filesystem-based dataset, table name for HyperTable,
@@ -218,12 +283,41 @@ class JavaSparkContext(val sc: SparkContext) extends JavaSparkContextVarargsWork
     path: String,
     inputFormatClass: Class[F],
     keyClass: Class[K],
+    valueClass: Class[V],
+    minSplits: Int,
+    cloneRecords: Boolean
+    ): JavaPairRDD[K, V] = {
+    implicit val kcm: ClassTag[K] = ClassTag(keyClass)
+    implicit val vcm: ClassTag[V] = ClassTag(valueClass)
+    new JavaPairRDD(sc.hadoopFile(path, inputFormatClass, keyClass, valueClass, 
+      minSplits, cloneRecords))
+  }
+
+  /** Get an RDD for a Hadoop file with an arbitrary InputFormat */
+  def hadoopFile[K, V, F <: InputFormat[K, V]](
+    path: String,
+    inputFormatClass: Class[F],
+    keyClass: Class[K],
     valueClass: Class[V]
     ): JavaPairRDD[K, V] = {
     implicit val kcm: ClassTag[K] = ClassTag(keyClass)
     implicit val vcm: ClassTag[V] = ClassTag(valueClass)
     new JavaPairRDD(sc.hadoopFile(path,
       inputFormatClass, keyClass, valueClass))
+  }
+
+  /** Get an RDD for a Hadoop file with an arbitrary InputFormat */
+  def hadoopFile[K, V, F <: InputFormat[K, V]](
+    path: String,
+    inputFormatClass: Class[F],
+    keyClass: Class[K],
+    valueClass: Class[V],
+    cloneRecords: Boolean
+    ): JavaPairRDD[K, V] = {
+    implicit val kcm: ClassTag[K] = ClassTag(keyClass)
+    implicit val vcm: ClassTag[V] = ClassTag(valueClass)
+    new JavaPairRDD(sc.hadoopFile(path,
+      inputFormatClass, keyClass, valueClass, cloneRecords = cloneRecords))
   }
 
   /**
@@ -245,6 +339,22 @@ class JavaSparkContext(val sc: SparkContext) extends JavaSparkContextVarargsWork
    * Get an RDD for a given Hadoop file with an arbitrary new API InputFormat
    * and extra configuration options to pass to the input format.
    */
+  def newAPIHadoopFile[K, V, F <: NewInputFormat[K, V]](
+    path: String,
+    fClass: Class[F],
+    kClass: Class[K],
+    vClass: Class[V],
+    conf: Configuration,
+    cloneRecords: Boolean): JavaPairRDD[K, V] = {
+    implicit val kcm: ClassTag[K] = ClassTag(kClass)
+    implicit val vcm: ClassTag[V] = ClassTag(vClass)
+    new JavaPairRDD(sc.newAPIHadoopFile(path, fClass, kClass, vClass, conf, cloneRecords))
+  }
+
+  /**
+   * Get an RDD for a given Hadoop file with an arbitrary new API InputFormat
+   * and extra configuration options to pass to the input format.
+   */
   def newAPIHadoopRDD[K, V, F <: NewInputFormat[K, V]](
     conf: Configuration,
     fClass: Class[F],
@@ -253,6 +363,21 @@ class JavaSparkContext(val sc: SparkContext) extends JavaSparkContextVarargsWork
     implicit val kcm: ClassTag[K] = ClassTag(kClass)
     implicit val vcm: ClassTag[V] = ClassTag(vClass)
     new JavaPairRDD(sc.newAPIHadoopRDD(conf, fClass, kClass, vClass))
+  }
+
+  /**
+   * Get an RDD for a given Hadoop file with an arbitrary new API InputFormat
+   * and extra configuration options to pass to the input format.
+   */
+  def newAPIHadoopRDD[K, V, F <: NewInputFormat[K, V]](
+    conf: Configuration,
+    fClass: Class[F],
+    kClass: Class[K],
+    vClass: Class[V],
+    cloneRecords: Boolean): JavaPairRDD[K, V] = {
+    implicit val kcm: ClassTag[K] = ClassTag(kClass)
+    implicit val vcm: ClassTag[V] = ClassTag(vClass)
+    new JavaPairRDD(sc.newAPIHadoopRDD(conf, fClass, kClass, vClass, cloneRecords))
   }
 
   /** Build the union of two or more RDDs. */
@@ -320,8 +445,9 @@ class JavaSparkContext(val sc: SparkContext) extends JavaSparkContextVarargsWork
     sc.accumulable(initialValue)(param)
 
   /**
-   * Broadcast a read-only variable to the cluster, returning a [[org.apache.spark.Broadcast]] object for
-   * reading it in distributed functions. The variable will be sent to each cluster only once.
+   * Broadcast a read-only variable to the cluster, returning a
+   * [[org.apache.spark.broadcast.Broadcast]] object for reading it in distributed functions.
+   * The variable will be sent to each cluster only once.
    */
   def broadcast[T](value: T): Broadcast[T] = sc.broadcast(value)
 
@@ -381,20 +507,7 @@ class JavaSparkContext(val sc: SparkContext) extends JavaSparkContextVarargsWork
 
   /**
    * Set the directory under which RDDs are going to be checkpointed. The directory must
-   * be a HDFS path if running on a cluster. If the directory does not exist, it will
-   * be created. If the directory exists and useExisting is set to true, then the
-   * exisiting directory will be used. Otherwise an exception will be thrown to
-   * prevent accidental overriding of checkpoint files in the existing directory.
-   */
-  def setCheckpointDir(dir: String, useExisting: Boolean) {
-    sc.setCheckpointDir(dir, useExisting)
-  }
-
-  /**
-   * Set the directory under which RDDs are going to be checkpointed. The directory must
-   * be a HDFS path if running on a cluster. If the directory does not exist, it will
-   * be created. If the directory exists, an exception will be thrown to prevent accidental
-   * overriding of checkpoint files.
+   * be a HDFS path if running on a cluster.
    */
   def setCheckpointDir(dir: String) {
     sc.setCheckpointDir(dir)
@@ -405,10 +518,88 @@ class JavaSparkContext(val sc: SparkContext) extends JavaSparkContextVarargsWork
       implicitly[ClassTag[AnyRef]].asInstanceOf[ClassTag[T]]
     new JavaRDD(sc.checkpointFile(path))
   }
+
+  /**
+   * Return a copy of this JavaSparkContext's configuration. The configuration ''cannot'' be
+   * changed at runtime.
+   */
+  def getConf: SparkConf = sc.getConf
+
+  /**
+   * Pass-through to SparkContext.setCallSite.  For API support only.
+   */
+  def setCallSite(site: String) {
+    sc.setCallSite(site)
+  }
+
+  /**
+   * Pass-through to SparkContext.setCallSite.  For API support only.
+   */
+  def clearCallSite() {
+    sc.clearCallSite()
+  }
+
+  /**
+   * Set a local property that affects jobs submitted from this thread, such as the
+   * Spark fair scheduler pool.
+   */
+  def setLocalProperty(key: String, value: String): Unit = sc.setLocalProperty(key, value)
+
+  /**
+   * Get a local property set in this thread, or null if it is missing. See
+   * [[org.apache.spark.api.java.JavaSparkContext.setLocalProperty]].
+   */
+  def getLocalProperty(key: String): String = sc.getLocalProperty(key)
+
+  /**
+   * Assigns a group ID to all the jobs started by this thread until the group ID is set to a
+   * different value or cleared.
+   *
+   * Often, a unit of execution in an application consists of multiple Spark actions or jobs.
+   * Application programmers can use this method to group all those jobs together and give a
+   * group description. Once set, the Spark web UI will associate such jobs with this group.
+   *
+   * The application can also use [[org.apache.spark.api.java.JavaSparkContext.cancelJobGroup]]
+   * to cancel all running jobs in this group. For example,
+   * {{{
+   * // In the main thread:
+   * sc.setJobGroup("some_job_to_cancel", "some job description");
+   * rdd.map(...).count();
+   *
+   * // In a separate thread:
+   * sc.cancelJobGroup("some_job_to_cancel");
+   * }}}
+   */
+  def setJobGroup(groupId: String, description: String): Unit = sc.setJobGroup(groupId, description)
+
+  /** Clear the current thread's job group ID and its description. */
+  def clearJobGroup(): Unit = sc.clearJobGroup()
+
+  /**
+   * Cancel active jobs for the specified group. See
+   * [[org.apache.spark.api.java.JavaSparkContext.setJobGroup]] for more information.
+   */
+  def cancelJobGroup(groupId: String): Unit = sc.cancelJobGroup(groupId)
+
+  /** Cancel all jobs that have been scheduled or are running. */
+  def cancelAllJobs(): Unit = sc.cancelAllJobs()
 }
 
 object JavaSparkContext {
   implicit def fromSparkContext(sc: SparkContext): JavaSparkContext = new JavaSparkContext(sc)
 
   implicit def toSparkContext(jsc: JavaSparkContext): SparkContext = jsc.sc
+
+  /**
+   * Find the JAR from which a given class was loaded, to make it easy for users to pass
+   * their JARs to SparkContext.
+   */
+  def jarOfClass(cls: Class[_]): Array[String] = SparkContext.jarOfClass(cls).toArray
+
+  /**
+   * Find the JAR that contains the class of a particular object, to make it easy for users
+   * to pass their JARs to SparkContext. In most cases you can call jarOfObject(this) in
+   * your driver program.
+   */
+  def jarOfObject(obj: AnyRef): Array[String] = SparkContext.jarOfObject(obj).toArray
 }

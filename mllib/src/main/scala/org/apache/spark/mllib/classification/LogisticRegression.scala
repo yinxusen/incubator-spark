@@ -97,7 +97,7 @@ object LogisticRegressionWithSGD {
    * @param numIterations Number of iterations of gradient descent to run.
    * @param stepSize Step size to be used for each iteration of gradient descent.
    * @param miniBatchFraction Fraction of data to be used per iteration.
-   * @param initialWeights Initial set of weights to be used. Array should be equal in size to 
+   * @param initialWeights Initial set of weights to be used. Array should be equal in size to
    *        the number of features in the data.
    */
   def train(
@@ -187,8 +187,8 @@ object LogisticRegressionWithSGD {
     val model = LogisticRegressionWithSGD.train(data, args(3).toInt, args(2).toDouble)
     val end = System.nanoTime
     println(s"total ${end-begin}")
-    println(model.weights)
-    println(model.intercept)
+    println("Weights: " + model.weights.mkString("[", ", ", "]"))
+    println("Intercept: " + model.intercept)
 
     sc.stop()
   }
