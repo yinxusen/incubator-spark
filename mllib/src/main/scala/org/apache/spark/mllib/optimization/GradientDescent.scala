@@ -175,9 +175,9 @@ object GradientDescent extends Logging {
     var weights = new DoubleMatrix(initialWeights.length, 1, initialWeights: _*)
     var regVal = 0.0
 
+    val begin = System.nanoTime
     val timeArray = new ArrayBuffer[Long](numOuterIterations)
     for (i <- 1 to numOuterIterations) {
-      val begin = System.nanoTime
       val weightsAndLosses = data.mapPartitions { currentPartitionIterator =>
         val currentPartitionData = currentPartitionIterator.toArray
 
