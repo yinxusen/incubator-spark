@@ -98,7 +98,7 @@ class GradientDescentSuite extends FunSuite with BeforeAndAfterAll with ShouldMa
     val dataRDD = sc.parallelize(data, 2).cache()
     val initialWeightsWithIntercept = Array(1.0, initialWeights: _*)
 
-    val (_, loss) = GradientDescent.runMiniBatchSGD(
+    val (_, loss) = GradientDescentAlt.runMiniBatchSGD(
       dataRDD,
       gradient,
       updater,
