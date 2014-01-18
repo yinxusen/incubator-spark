@@ -166,6 +166,8 @@ object GradientDescent extends Logging {
       miniBatchFraction: Double,
       initialWeights: Array[Double]) : (Array[Double], Array[Double]) = {
 
+    data.cache()
+
     val stochasticLossHistory = new ArrayBuffer[Double](numOuterIterations)
 
     val numExamples: Long = data.count()
