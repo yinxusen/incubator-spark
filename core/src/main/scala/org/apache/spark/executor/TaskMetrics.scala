@@ -29,6 +29,16 @@ class TaskMetrics extends Serializable {
   var executorDeserializeTime: Int = _
 
   /**
+   * Time when executor start to running the task
+   */
+  var executorStartTime: Long = _
+
+  /**
+   * Time when executor finish the task
+   */
+  var executorFinishTime: Long = _
+
+  /**
    * Time the executor spends actually running the task (including fetching shuffle data)
    */
   var executorRunTime: Int = _

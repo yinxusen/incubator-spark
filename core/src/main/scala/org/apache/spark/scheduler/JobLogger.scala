@@ -265,7 +265,9 @@ class JobLogger(val user: String, val logDirName: String)
     val info = " TID=" + taskInfo.taskId + " STAGE_ID=" + stageID +
                " START_TIME=" + taskInfo.launchTime + " FINISH_TIME=" + taskInfo.finishTime +
                " EXECUTOR_ID=" + taskInfo.executorId +  " HOST=" + taskMetrics.hostname
-    val executorRunTime = " EXECUTOR_RUN_TIME=" + taskMetrics.executorRunTime
+    val executorRunTime = " TASK_START_TIME=" + taskMetrics.executorStartTime +
+      " TASK_FINISH_TIME=" + taskMetrics.executorFinishTime +
+      " TASK_RUN_TIME=" + taskMetrics.executorRunTime
     val readMetrics = taskMetrics.shuffleReadMetrics match {
       case Some(metrics) =>
         " SHUFFLE_FINISH_TIME=" + metrics.shuffleFinishTime +
@@ -278,7 +280,8 @@ class JobLogger(val user: String, val logDirName: String)
       case None => ""
     }
     val writeMetrics = taskMetrics.shuffleWriteMetrics match {
-      case Some(metrics) => " SHUFFLE_BYTES_WRITTEN=" + metrics.shuffleBytesWritten
+      case Some(metrics) => " SHUFFLE_BYTES_WRITTEN=" + metrics.shuffleBytesWritten +
+        " SHUFFLE_WRITE_TIME=" + metrics.shuffleWriteTime
       case None => ""
     }
     stageLogInfo(stageID, status + info + executorRunTime + readMetrics + writeMetrics)
