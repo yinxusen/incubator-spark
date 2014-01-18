@@ -179,7 +179,7 @@ private[spark] class ShuffleMapTask(
       // Update shuffle metrics.
       val shuffleMetrics = new ShuffleWriteMetrics
       shuffleMetrics.shuffleBytesWritten = totalBytes
-      shuffleMetrics.shuffleWriteTime = totalTime
+      shuffleMetrics.shuffleWriteTime = totalTime / 1000000
       metrics.get.shuffleWriteMetrics = Some(shuffleMetrics)
 
       success = true

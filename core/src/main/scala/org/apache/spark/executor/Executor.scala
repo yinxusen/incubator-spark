@@ -226,6 +226,8 @@ private[spark] class Executor(
         for (m <- task.metrics) {
           m.hostname = Utils.localHostName()
           m.executorDeserializeTime = (taskStart - startTime).toInt
+          m.executorStartTime = taskStart.toLong
+          m.executorFinishTime = taskFinish.toLong
           m.executorRunTime = (taskFinish - taskStart).toInt
           m.jvmGCTime = gcTime - startGCTime
           m.resultSerializationTime = (afterSerialization - beforeSerialization).toInt
