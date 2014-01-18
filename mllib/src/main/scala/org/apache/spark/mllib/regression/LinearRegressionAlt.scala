@@ -30,7 +30,7 @@ import org.jblas.DoubleMatrix
  * @param weights Weights computed for every feature.
  * @param intercept Intercept computed for this model.
  */
-class LinearRegressionModel(
+class LinearRegressionModelAlt(
                   override val weights: Array[Double],
                   override val intercept: Double)
   extends GeneralizedLinearModel(weights, intercept)
@@ -45,16 +45,16 @@ class LinearRegressionModel(
 /**
  * Train a linear regression model with no regularization using Stochastic Gradient Descent.
  */
-class LinearRegressionWithSGD private (
+class LinearRegressionWithSGDAlt private (
     var stepSize: Double,
     var numIterations: Int,
     var miniBatchFraction: Double)
-  extends GeneralizedLinearAlgorithm[LinearRegressionModel]
+  extends GeneralizedLinearAlgorithm[LinearRegressionModelAlt]
   with Serializable {
 
   val gradient = new SquaredGradient()
   val updater = new SimpleUpdater()
-  val optimizer = new GradientDescent(gradient, updater).setStepSize(stepSize)
+  val optimizer = new GradientDescentAlt(gradient, updater).setStepSize(stepSize)
     .setNumIterations(numIterations)
     .setMiniBatchFraction(miniBatchFraction)
 
@@ -64,14 +64,14 @@ class LinearRegressionWithSGD private (
   def this() = this(1.0, 100, 1.0)
 
   def createModel(weights: Array[Double], intercept: Double) = {
-    new LinearRegressionModel(weights, intercept)
+    new LinearRegressionModelAlt(weights, intercept)
   }
 }
 
 /**
  * Top-level methods for calling LinearRegression.
  */
-object LinearRegressionWithSGD {
+object LinearRegressionWithSGDAlt {
 
   /**
    * Train a Linear Regression model given an RDD of (label, features) pairs. We run a fixed number
@@ -92,9 +92,9 @@ object LinearRegressionWithSGD {
       stepSize: Double,
       miniBatchFraction: Double,
       initialWeights: Array[Double])
-    : LinearRegressionModel =
+    : LinearRegressionModelAlt =
   {
-    new LinearRegressionWithSGD(stepSize, numIterations, miniBatchFraction).run(input,
+    new LinearRegressionWithSGDAlt(stepSize, numIterations, miniBatchFraction).run(input,
       initialWeights)
   }
 
@@ -113,9 +113,9 @@ object LinearRegressionWithSGD {
       numIterations: Int,
       stepSize: Double,
       miniBatchFraction: Double)
-    : LinearRegressionModel =
+    : LinearRegressionModelAlt =
   {
-    new LinearRegressionWithSGD(stepSize, numIterations, miniBatchFraction).run(input)
+    new LinearRegressionWithSGDAlt(stepSize, numIterations, miniBatchFraction).run(input)
   }
 
   /**
@@ -126,13 +126,13 @@ object LinearRegressionWithSGD {
    * @param input RDD of (label, array of features) pairs.
    * @param stepSize Step size to be used for each iteration of Gradient Descent.
    * @param numIterations Number of iterations of gradient descent to run.
-   * @return a LinearRegressionModel which has the weights and offset from training.
+   * @return a LinearRegressionModelAlt which has the weights and offset from training.
    */
   def train(
       input: RDD[LabeledPoint],
       numIterations: Int,
       stepSize: Double)
-    : LinearRegressionModel =
+    : LinearRegressionModelAlt =
   {
     train(input, numIterations, stepSize, 1.0)
   }
@@ -144,12 +144,12 @@ object LinearRegressionWithSGD {
    *
    * @param input RDD of (label, array of features) pairs.
    * @param numIterations Number of iterations of gradient descent to run.
-   * @return a LinearRegressionModel which has the weights and offset from training.
+   * @return a LinearRegressionModelAlt which has the weights and offset from training.
    */
   def train(
       input: RDD[LabeledPoint],
       numIterations: Int)
-    : LinearRegressionModel =
+    : LinearRegressionModelAlt =
   {
     train(input, numIterations, 1.0, 1.0)
   }
@@ -162,7 +162,7 @@ object LinearRegressionWithSGD {
     val sc = new SparkContext(args(0), "LinearRegression")
     // val data = MLUtils.loadLabeledData(sc, args(1))
     val data = MLUtils.loadSparseLabeledData(sc, args(1), 255, args(4).toInt)
-    val model = LinearRegressionWithSGD.train(data, args(3).toInt, args(2).toDouble)
+    val model = LinearRegressionWithSGDAlt.train(data, args(3).toInt, args(2).toDouble)
     println("Weights: " + model.weights.mkString("[", ", ", "]"))
     println("Intercept: " + model.intercept)
 

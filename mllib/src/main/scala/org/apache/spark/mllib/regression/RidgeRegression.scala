@@ -199,13 +199,14 @@ object RidgeRegressionWithSGD {
   }
 
   def main(args: Array[String]) {
-    if (args.length != 5) {
+    if (args.length != 6) {
       println("Usage: RidgeRegression <master> <input_dir> <step_size> <regularization_parameter>" +
-        " <niters>")
+        " <niters> <mini-split>")
       System.exit(1)
     }
     val sc = new SparkContext(args(0), "RidgeRegression")
-    val data = MLUtils.loadLabeledData(sc, args(1))
+    // val data = MLUtils.loadLabeledData(sc, args(1))
+    val data = MLUtils.loadSparseLabeledData(sc, args(1), 255, args(5).toInt)
     val model = RidgeRegressionWithSGD.train(data, args(4).toInt, args(2).toDouble,
         args(3).toDouble)
     println("Weights: " + model.weights.mkString("[", ", ", "]"))
