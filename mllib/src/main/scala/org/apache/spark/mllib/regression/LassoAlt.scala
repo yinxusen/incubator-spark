@@ -203,8 +203,9 @@ object LassoWithSGDAlt {
       System.exit(1)
     }
     val sc = new SparkContext(args(0), "Lasso")
+    val dimension = System.getProperty("spark.default.dimension").toInt
     // val data = MLUtils.loadLabeledData(sc, args(1))
-    val data = MLUtils.loadSparseLabeledData(sc, args(1), 255, args(5).toInt)
+    val data = MLUtils.loadSparseLabeledData(sc, args(1), dimension, args(5).toInt)
     val model = LassoWithSGDAlt.train(data, args(4).toInt, args(2).toDouble, args(3).toDouble)
     println("Weights: " + model.weights.mkString("[", ", ", "]"))
     println("Intercept: " + model.intercept)

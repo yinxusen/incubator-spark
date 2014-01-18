@@ -182,7 +182,8 @@ object LogisticRegressionWithSGD {
     }
     val sc = new SparkContext(args(0), "LogisticRegression")
     // val data = MLUtils.loadLabeledData(sc, args(1))
-    val data = MLUtils.loadSparseLabeledData(sc, args(1), 255, args(4).toInt)
+    val dimension = System.getProperty("spark.default.dimension").toInt
+    val data = MLUtils.loadSparseLabeledData(sc, args(1), dimension, args(4).toInt)
     val begin = System.nanoTime
     val model = LogisticRegressionWithSGD.train(data, args(3).toInt, args(2).toDouble)
     val end = System.nanoTime
