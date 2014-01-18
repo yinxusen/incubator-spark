@@ -164,7 +164,7 @@ class PythonMLLibAPI extends Serializable {
       stepSize: Double, regParam: Double, miniBatchFraction: Double,
       initialWeightsBA: Array[Byte]): java.util.List[java.lang.Object] = {
     trainRegressionModel((data, initialWeights) =>
-        SVMWithSGD.train(data, numIterations, stepSize, regParam,
+        SVMWithSGDAlt.train(data, numIterations, stepSize, regParam,
                                      miniBatchFraction, initialWeights),
         dataBytesJRDD, initialWeightsBA)
   }

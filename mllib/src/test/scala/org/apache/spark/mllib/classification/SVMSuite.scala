@@ -83,7 +83,7 @@ class SVMSuite extends FunSuite with LocalSparkContext {
     val testRDD = sc.parallelize(testData, 2)
     testRDD.cache()
 
-    val svm = new SVMWithSGD()
+    val svm = new SVMWithSGDAlt()
     svm.optimizer.setStepSize(1.0).setRegParam(1.0).setNumIterations(100)
 
     val model = svm.run(testRDD)
@@ -115,7 +115,7 @@ class SVMSuite extends FunSuite with LocalSparkContext {
     val testRDD = sc.parallelize(testData, 2)
     testRDD.cache()
 
-    val svm = new SVMWithSGD()
+    val svm = new SVMWithSGDAlt()
     svm.optimizer.setStepSize(1.0).setRegParam(1.0).setNumIterations(100)
 
     val model = svm.run(testRDD, initialWeights)
@@ -150,10 +150,10 @@ class SVMSuite extends FunSuite with LocalSparkContext {
     }
 
     intercept[SparkException] {
-      val model = SVMWithSGD.train(testRDDInvalid, 100)
+      val model = SVMWithSGDAlt.train(testRDDInvalid, 100)
     }
 
     // Turning off data validation should not throw an exception
-    val noValidationModel = new SVMWithSGD().setValidateData(false).run(testRDDInvalid)
+    val noValidationModel = new SVMWithSGDAlt().setValidateData(false).run(testRDDInvalid)
   }
 }
