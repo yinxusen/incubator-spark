@@ -97,7 +97,7 @@ object LogisticRegressionWithSGD {
    * @param numIterations Number of iterations of gradient descent to run.
    * @param stepSize Step size to be used for each iteration of gradient descent.
    * @param miniBatchFraction Fraction of data to be used per iteration.
-   * @param initialWeights Initial set of weights to be used. Array should be equal in size to 
+   * @param initialWeights Initial set of weights to be used. Array should be equal in size to
    *        the number of features in the data.
    */
   def train(
