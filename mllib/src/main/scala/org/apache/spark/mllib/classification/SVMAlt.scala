@@ -23,6 +23,7 @@ import org.apache.spark.mllib.optimization._
 import org.apache.spark.mllib.regression._
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.mllib.util.DataValidators
+import org.apache.spark.scheduler.JobLogger
 
 import org.jblas.DoubleMatrix
 
@@ -174,11 +175,12 @@ object SVMWithSGDAlt {
   }
 
   def main(args: Array[String]) {
-    if (args.length != 5) {
+    if (args.length != 6) {
       println("Usage: SVM <master> <input_dir> <step_size> <regularization_parameter> <niters> <mini-split>")
       System.exit(1)
     }
     val sc = new SparkContext(args(0), "SVM")
+    sc.addSparkListener(new JobLogger())
     // val data = MLUtils.loadLabeledData(sc, args(1))
     val data = MLUtils.loadSparseLabeledData(sc, args(1), 255, args(5).toInt)
     val model = SVMWithSGDAlt.train(data, args(4).toInt, args(2).toDouble, args(3).toDouble)

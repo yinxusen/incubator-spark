@@ -18,7 +18,7 @@ PR_INPUT=/home/yama/bdas/data/web-Google.txt
 
 LR_INPUT=hdfs://queen:9000/xusen
 
-LR_INPUT_DISK=/home/yama/data/xusen
+LR_INPUT_DISK=/home/yama/data/xusen/webspam_wc_normalized_trigram.svm
 
 MLLIB=org.apache.spark.mllib
 
@@ -29,7 +29,7 @@ EXAMPLE_ALS="./run-example org.apache.spark.examples.SparkALS $MASTER 10"
 MLLIB_ALS="./spark-class $MLLIB.recommendation.ALS $MASTER $ALS_INPUT 5 3 $ALS_OUTPUT"
 PR="$CUR/bin/run-example org.apache.spark.examples.SparkPageRank $MASTER $PR_INPUT 3 60"
 
-ITER=300
+ITER=20
 PART=120
 RUN="bin/spark-class"
 
@@ -39,31 +39,23 @@ LR_OLD="$RUN $MLLIB.classification.LogisticRegressionWithSGDAlt $MASTER $LR_INPU
 LR_NEW_DISK="$RUN $MLLIB.classification.LogisticRegressionWithSGD $MASTER $LR_INPUT_DISK 1.0 $ITER $PART"
 LR_OLD_DISK="$RUN $MLLIB.classification.LogisticRegressionWithSGDAlt $MASTER $LR_INPUT_DISK 1.0 $ITER $PART"
 
-SVM_NEW="$RUN $MLLIB.classification.SVMWithSGD $MASTER $LR_INPUT_DISK 1.0 $ITER $PART"
-SVM_OLD="$RUN $MLLIB.classification.SVMWithSGDAlt $MASTER $LR_INPUT_DISK 1.0 $ITER $PART"
+SVM_NEW="$RUN $MLLIB.classification.SVMWithSGD $MASTER $LR_INPUT_DISK 1.0 0.1 $ITER $PART"
+SVM_OLD="$RUN $MLLIB.classification.SVMWithSGDAlt $MASTER $LR_INPUT_DISK 1.0 0.1 $ITER $PART"
 
 #-------- do the real run --------
 
 DST=/tmp/spark-yama
 
+#for((ii=0; ii<5; ii++)); do
 	START=`date +%s`
 	$SVM_NEW 2>&1 | tee $DST/log.tmp
 	FINISH=`date +%s`
 	LOSS=`cat $DST/log.tmp | grep "GradientDescent finished" | awk '{print $NF}'`
 	mv $DST/log.tmp $DST/$START-$[$FINISH - $START]-${LOSS:0:5}-i$ITER-p$PART-SVM_NEW.log
-
-exit 0
-
-for((ii=0; ii<5; ii++)); do
-	START=`date +%s`
-	$LR_NEW_DISK 2>&1 | tee $DST/log.tmp
-	FINISH=`date +%s`
-	LOSS=`cat $DST/log.tmp | grep "GradientDescent finished" | awk '{print $NF}'`
-	mv $DST/log.tmp $DST/$START-$[$FINISH - $START]-${LOSS:0:5}-i$ITER-p$PART-LR_NEW_DISK.log
-	sleep 5
-	START=`date +%s`
-	$LR_OLD_DISK 2>&1 | tee $DST/log.tmp
-	FINISH=`date +%s`
-	LOSS=`cat $DST/log.tmp | grep "GradientDescent finished" | awk '{print $NF}'`
-	mv $DST/log.tmp $DST/$START-$[$FINISH - $START]-${LOSS:0:5}-i$ITER-p$PART-LR_OLD_DISK.log
-done
+	#sleep 5
+	#START=`date +%s`
+	#$SVM_OLD 2>&1 | tee $DST/log.tmp
+	#FINISH=`date +%s`
+	#LOSS=`cat $DST/log.tmp | grep "GradientDescent finished" | awk '{print $NF}'`
+	#mv $DST/log.tmp $DST/$START-$[$FINISH - $START]-${LOSS:0:5}-i$ITER-p$PART-SVM_OLD.log
+#done
