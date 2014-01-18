@@ -35,7 +35,8 @@ class GradientDescent(var gradient: Gradient, var updater: Updater)
 {
   private var stepSize: Double = 1.0
   private var numIterations: Int = 100
-  private val numInnerIterations: Int = 20
+  private val numInnerIterations: Int =
+    System.getProperty("spark.gradientDescent.innerIteration", "1").toInt
   private var regParam: Double = 0.0
   private var miniBatchFraction: Double = 1.0
 

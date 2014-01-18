@@ -143,8 +143,8 @@ object GradientDescentAlt extends Logging {
 
     val timeArray = new ArrayBuffer[Long](numIterations)
 
+    val begin = System.nanoTime
     for (i <- 1 to numIterations) {
-      val begin = System.nanoTime
       val (gradientSum, lossSum) = data.sample(false, miniBatchFraction, 42+i).map {
         case (y, features) =>
           val featuresCol = new DoubleMatrix(features.length, 1, features:_*)
