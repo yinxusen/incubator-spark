@@ -243,11 +243,14 @@ object SparkBuild extends Build {
   def coreSettings = sharedSettings ++ Seq(
     name := "spark-core",
     resolvers ++= Seq(
+       "Sonatype Releases"    at "https://oss.sonatype.org/content/repositories/releases/",
        "JBoss Repository"     at "http://repository.jboss.org/nexus/content/repositories/releases/",
        "Cloudera Repository"  at "https://repository.cloudera.com/artifactory/cloudera-repos/"
     ),
 
     libraryDependencies ++= Seq(
+        "org.scalanlp"             % "chalk"            % "1.3.0",
+        "org.scalanlp"             % "breeze_2.10"      % "0.5.2",
         "com.google.guava"         % "guava"            % "14.0.1",
         "com.google.code.findbugs" % "jsr305"           % "1.3.9",
         "log4j"                    % "log4j"            % "1.2.17",

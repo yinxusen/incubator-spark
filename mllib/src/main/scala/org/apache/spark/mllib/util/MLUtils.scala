@@ -22,7 +22,12 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext._
 
 import org.jblas.DoubleMatrix
+
+import breeze.linalg._
+import breeze.util.Index
+import chalk.text.tokenize.JavaWordTokenizer
 import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.clustering.Document
 
 /**
  * Helper methods to load, save and pre-process data used in ML Lib.
@@ -132,5 +137,30 @@ object MLUtils {
       i += 1
     }
     sum
+  }
+
+  def splitNameAndContent(nameAndContent: String) : (String, String) = {
+    val pos = nameAndContent.indexOf(',')
+    assert(pos != -1)
+    nameAndContent.splitAt(pos)
+  }
+
+  def loadCorpus(sc: SparkContext, dir: String, numTopics: Int, miniSplit: Int): RDD[(Int, VectorBuilder[Int])] = {
+    val wordMap = Index[String]()
+    val docMap = Index[String]()
+    val almostTrainingData = sc.textFile(dir, miniSplit).map { line =>
+      val splitVersion = splitNameAndContent(line)
+      val fileIdx = docMap.index(splitVersion._1)
+      val builder = new VectorBuilder[Int](Int.MaxValue, line.length / 20)
+      for (token <- JavaWordTokenizer(splitVersion._2) if token(0).isLetter) {
+        builder.add(wordMap.index(token), 1)
+      }
+      (fileIdx, builder)
+    }
+    almostTrainingData.map { case (fileIdx, content) =>
+      content.length = wordMap.size
+      content.toSparseVector
+      Document(fileIdx, content)
+    }
   }
 }
