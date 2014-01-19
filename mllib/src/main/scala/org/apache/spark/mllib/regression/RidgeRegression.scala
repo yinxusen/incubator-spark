@@ -21,6 +21,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.mllib.optimization._
 import org.apache.spark.mllib.util.MLUtils
+import org.apache.spark.scheduler.JobLogger
 
 import org.jblas.DoubleMatrix
 
@@ -205,6 +206,7 @@ object RidgeRegressionWithSGD {
       System.exit(1)
     }
     val sc = new SparkContext(args(0), "RidgeRegression")
+    sc.addSparkListener(new JobLogger())
     val dimension = System.getProperty("spark.default.dimension").toInt
     // val data = MLUtils.loadLabeledData(sc, args(1))
     val data = MLUtils.loadSparseLabeledData(sc, args(1), dimension, args(5).toInt)
