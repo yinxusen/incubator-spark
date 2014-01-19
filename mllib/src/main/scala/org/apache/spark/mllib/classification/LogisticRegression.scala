@@ -25,6 +25,7 @@ import org.apache.spark.mllib.optimization._
 import org.apache.spark.mllib.regression._
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.mllib.util.DataValidators
+import org.apache.spark.scheduler.JobLogger
 
 import org.jblas.DoubleMatrix
 
@@ -181,6 +182,7 @@ object LogisticRegressionWithSGD {
       System.exit(1)
     }
     val sc = new SparkContext(args(0), "LogisticRegression")
+    sc.addSparkListener(new JobLogger())
     // val data = MLUtils.loadLabeledData(sc, args(1))
     val dimension = System.getProperty("spark.default.dimension").toInt
     val data = MLUtils.loadSparseLabeledData(sc, args(1), dimension, args(4).toInt)
