@@ -28,26 +28,25 @@ object GibbsSampling {
     val docTopicCounts = DenseMatrix.zeros[Int](numDocs, numTopics)
     val termTopicCounts = DenseMatrix.zeros[Int](numTerms, numTopics)
 
-    val topicAssignment = new VectorBuilder[Int](Int.MaxValue, numTerms)
-
     // initialisation
     data.mapPartitions { currentPartitionIter =>
-      val currentPartitionData = currentPartitionIter.toArray
       for (i <- 0 until numInnerIterations) {
-        var wordCountsPerPartition = 0
-        currentPartitionData.map { case (fileIdx, content) =>
+        val currentPartitionData = currentPartitionIter.toArray
+        currentPartitionData.map { case Document(fileIdx, content) =>
+          while (content.hasNext) {
+            val (word, topic) = content.next
+            val z = uniformDistSampler(numTopics)
+              docCounts(fileIdx) += 1
+              topicCounts(z) += 1
+              docTopicCounts(fileIdx, z) += 1
+              termTopicCounts(topic, z) += 1
+          }
           var offset = 0
           while (offset < content.activeSize) {
             val index = content.indexAt(offset)
             val value = content.valueAt(offset)
             for (j <- 0 until value) {
-              val z = uniformDistSampler(numTopics)
-              topicAssignment.add(wordCountsPerPartition, z)
-              wordCountsPerPartition += 1
-              docCounts(fileIdx) += 1
-              topicCounts(z) += 1
-              docTopicCounts(fileIdx, z) += 1
-              termTopicCounts(index, z) += 1
+
             }
             offset += 1
           }

@@ -28,6 +28,7 @@ import breeze.util.Index
 import chalk.text.tokenize.JavaWordTokenizer
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.clustering.Document
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Helper methods to load, save and pre-process data used in ML Lib.
@@ -145,22 +146,23 @@ object MLUtils {
     nameAndContent.splitAt(pos)
   }
 
-  def loadCorpus(sc: SparkContext, dir: String, numTopics: Int, miniSplit: Int): RDD[(Int, VectorBuilder[Int])] = {
+  def loadCorpus(
+      sc: SparkContext,
+      dir: String,
+      numTopics: Int,
+      miniSplit: Int):
+    RDD[Document] = {
+
     val wordMap = Index[String]()
     val docMap = Index[String]()
-    val almostTrainingData = sc.textFile(dir, miniSplit).map { line =>
+    sc.textFile(dir, miniSplit).map { line =>
       val splitVersion = splitNameAndContent(line)
       val fileIdx = docMap.index(splitVersion._1)
-      val builder = new VectorBuilder[Int](Int.MaxValue, line.length / 20)
+      val content = new ArrayBuffer[(Int, Int)]
       for (token <- JavaWordTokenizer(splitVersion._2) if token(0).isLetter) {
-        builder.add(wordMap.index(token), 1)
+        content.append((wordMap.index(token), 0))
       }
-      (fileIdx, builder)
-    }
-    almostTrainingData.map { case (fileIdx, content) =>
-      content.length = wordMap.size
-      content.toSparseVector
-      Document(fileIdx, content)
+      Document(fileIdx, content.toIterator)
     }
   }
 }
