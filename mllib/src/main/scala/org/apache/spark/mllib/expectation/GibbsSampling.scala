@@ -1,9 +1,9 @@
 package org.apache.spark.mllib.expectation
 
 import org.apache.spark.rdd.RDD
-import breeze.linalg.{VectorBuilder, DenseMatrix, DenseVector, SparseVector}
+import org.jblas.DoubleMatrix
 import scala.util._
-import org.apache.spark.mllib.clustering.Document
+import org.apache.spark.mllib.clustering.{LDAModel, Document}
 
 class GibbsSampling
 
@@ -12,49 +12,133 @@ object GibbsSampling {
   def uniformDistSampler(dimension: Int): Int = Random.nextInt(dimension)
 
   def runGibbsSampling(
-      data: RDD[Document],
-      numInnerIterations: Int,
-      numTerms: Int,
-      numDocs: Int,
-      numTopics: Int,
-      docTopicSmoothing: Double,
-      termTopicSmoothing: Double) :
-      (DenseVector[Int], DenseVector[Int], DenseMatrix[Int], DenseMatrix[Int]) = {
+                        data: RDD[Document],
+                        numOuterIterations: Int,
+                        numInnerIterations: Int,
+                        numTerms: Int,
+                        numDocs: Int,
+                        numTopics: Int,
+                        docTopicSmoothing: Double,
+                        termTopicSmoothing: Double):
+  (DoubleMatrix, DoubleMatrix, DoubleMatrix, DoubleMatrix) = {
 
     data.cache
 
-    val docCounts = DenseVector.zeros[Int](numDocs)
-    val topicCounts = DenseVector.zeros[Int](numTopics)
-    val docTopicCounts = DenseMatrix.zeros[Int](numDocs, numTopics)
-    val termTopicCounts = DenseMatrix.zeros[Int](numTerms, numTopics)
-
-    // initialisation
-    data.mapPartitions { currentPartitionIter =>
-      for (i <- 0 until numInnerIterations) {
-        val currentPartitionData = currentPartitionIter.toArray
-        currentPartitionData.map { case Document(fileIdx, content) =>
-          while (content.hasNext) {
-            val (word, topic) = content.next
-            val z = uniformDistSampler(numTopics)
-              docCounts(fileIdx) += 1
-              topicCounts(z) += 1
-              docTopicCounts(fileIdx, z) += 1
-              termTopicCounts(topic, z) += 1
-          }
-          var offset = 0
-          while (offset < content.activeSize) {
-            val index = content.indexAt(offset)
-            val value = content.valueAt(offset)
-            for (j <- 0 until value) {
-
-            }
-            offset += 1
-          }
-        }
-      }
-      ???
+    // construct topic assignment RDD
+    var topicAssign = data.map {
+      case Document(docIdx, content) =>
+        content.map(_ => 0)
     }
-    ???
+
+    topicAssign.cache
+
+
+    val docCounts = DoubleMatrix.zeros(numDocs, 1)
+    val topicCounts = DoubleMatrix.zeros(numTopics, 1)
+    val docTopicCounts = DoubleMatrix.zeros(numDocs, numTopics)
+    val termTopicCounts = DoubleMatrix.zeros(numTerms, numTopics)
+
+    case class fiveElement(topic: Array[Int], dc: DoubleMatrix, tc: DoubleMatrix, dtc: DoubleMatrix, ttc: DoubleMatrix)
+    case class fourElement(dc: DoubleMatrix, tc: DoubleMatrix, dtc: DoubleMatrix, ttc: DoubleMatrix)
+
+    // Gibbs sampling
+    Iterator.iterate(LDAModel(docCounts, topicCounts, docTopicCounts, termTopicCounts)) {
+      case LDAModel(_, _, _, _, true) =>
+
+        val nextModel = LDAModel(
+          DoubleMatrix.zeros(numDocs, 1),
+          DoubleMatrix.zeros(numTopics, 1),
+          DoubleMatrix.zeros(numDocs, numTopics),
+          DoubleMatrix.zeros(numTerms, numTopics)
+        )
+
+        val topicAssignAndParams = data.zip(topicAssign).mapPartitions {
+          case (Document(docIdx, content), zIdx) =>
+            val curZIdxs = content.zip(zIdx).map {
+              case (word, _) =>
+                val curz = uniformDistSampler(numTopics)
+                docCounts.get(docIdx, 1) += 1
+                topicCounts.get(curz, 1) += 1
+                docTopicCounts.get(docIdx, curz) += 1
+                termTopicCounts.get(word, curz) += 1
+                curz
+            }
+            Seq(fiveElement(curZIdxs, docCounts, topicCounts, docTopicCounts, termTopicCounts)).toIterator
+        }
+
+        topicAssign.unpersist(true)
+        topicAssign = topicAssignAndParams.map {
+          case fiveElement(topic, _, _, _, _) => topic
+        }
+        topicAssign.cache
+
+        val params = topicAssignAndParams.map {
+          case fiveElement(_, dc, tc, dtc, ttc) => fourElement(dc, tc, dtc, ttc)
+        }.collect
+
+        val dc = params.map {
+          case fourElement(x, _, _, _) => x
+        }
+        val tc = params.map {
+          case fourElement(_, x, _, _) => x
+        }
+        val dtc = params.map {
+          case fourElement(_, _, x, _) => x
+        }
+        val ttc = params.map {
+          case fourElement(_, _, _, x) => x
+        }
+
+        LDAModel(dc.reduce(_ addi _), tc.reduce(_ addi _), dtc.reduce(_ addi _), ttc.reduce(_ addi _), false)
+
+      case current =>
+
+        val nextModel = LDAModel(
+          DoubleMatrix.zeros(numDocs, 1),
+          DoubleMatrix.zeros(numTopics, 1),
+          DoubleMatrix.zeros(numDocs, numTopics),
+          DoubleMatrix.zeros(numTerms, numTopics)
+        )
+
+        val topicAssignAndParams = data.zip(topicAssign).mapPartitions {
+          case (Document(docIdx, content), zIdx) =>
+            val curZIdxs = content.zip(zIdx).map {
+              case (word, _) =>
+                val curz = uniformDistSampler(numTopics)
+                docCounts.get(docIdx, 1) += 1
+                topicCounts.get(curz, 1) += 1
+                docTopicCounts.get(docIdx, curz) += 1
+                termTopicCounts.get(word, curz) += 1
+                curz
+            }
+            Seq(fiveElement(curZIdxs, docCounts, topicCounts, docTopicCounts, termTopicCounts)).toIterator
+        }
+
+        topicAssign.unpersist(true)
+        topicAssign = topicAssignAndParams.map {
+          case fiveElement(topic, _, _, _, _) => topic
+        }
+        topicAssign.cache
+
+        val params = topicAssignAndParams.map {
+          case fiveElement(_, dc, tc, dtc, ttc) => fourElement(dc, tc, dtc, ttc)
+        }.collect
+
+        val dc = params.map {
+          case fourElement(x, _, _, _) => x
+        }
+        val tc = params.map {
+          case fourElement(_, x, _, _) => x
+        }
+        val dtc = params.map {
+          case fourElement(_, _, x, _) => x
+        }
+        val ttc = params.map {
+          case fourElement(_, _, _, x) => x
+        }
+
+        current.copy(dc.reduce(_ addi _), tc.reduce(_ addi _), dtc.reduce(_ addi _), ttc.reduce(_ addi _), false)
+    }
   }
 }
 

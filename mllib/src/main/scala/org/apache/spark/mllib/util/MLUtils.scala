@@ -158,11 +158,11 @@ object MLUtils {
     sc.textFile(dir, miniSplit).map { line =>
       val splitVersion = splitNameAndContent(line)
       val fileIdx = docMap.index(splitVersion._1)
-      val content = new ArrayBuffer[(Int, Int)]
+      val content = new ArrayBuffer[Int]
       for (token <- JavaWordTokenizer(splitVersion._2) if token(0).isLetter) {
-        content.append((wordMap.index(token), 0))
+        content.append(wordMap.index(token))
       }
-      Document(fileIdx, content.toIterator)
+      Document(fileIdx, content.toArray)
     }
   }
 }

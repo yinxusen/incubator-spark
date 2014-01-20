@@ -5,12 +5,14 @@ import breeze.linalg._
 import org.apache.spark.{SparkContext, Logging}
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.rdd.RDD
+import org.jblas.DoubleMatrix
 
-class LDAModel (
-    val docCounts: DenseVector[Int],
-    val topicCounts: DenseVector[Int],
-    val docTopicCounts: DenseMatrix[Int],
-    val topicTermCounts: DenseMatrix[Int])
+case class LDAModel (
+    val docCounts: DoubleMatrix,
+    val topicCounts: DoubleMatrix,
+    val docTopicCounts: DoubleMatrix,
+    val topicTermCounts: DoubleMatrix,
+    var isInitialisation: Boolean = true)
   extends Serializable {
   ???
 }
