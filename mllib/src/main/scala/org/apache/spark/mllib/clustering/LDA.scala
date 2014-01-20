@@ -11,7 +11,7 @@ case class LDAModel (
     val docCounts: DoubleMatrix,
     val topicCounts: DoubleMatrix,
     val docTopicCounts: DoubleMatrix,
-    val termTopicCounts: DoubleMatrix,
+    val topicTermCounts: DoubleMatrix,
     var isInitialisation: Boolean = true)
   extends Serializable {
   ???
@@ -20,7 +20,7 @@ case class LDAModel (
 class LDA private (
     var numTopics: Int,
     var docTopicSmoothing: Double,
-    var termTopicSmoothing: Double,
+    var topicTermSmoothing: Double,
     var numIteration: Int,
     var numDocs: Int,
     var numTerms: Int)
@@ -31,10 +31,12 @@ class LDA private (
   }
 
   def solvePhiAndTheta(finalModel: LDAModel): (DoubleMatrix, DoubleMatrix) = {
-    val Theta = DoubleMatrix.zeros(numDocs, numTopics)
-    val Phi = DoubleMatrix.zeros(numTopics, numTerms)
-
-    ???
+    finalModel.docCounts.addi(docTopicSmoothing * numTopics)
+    finalModel.topicCounts.addi(topicTermSmoothing * numTerms)
+    finalModel.docTopicCounts.addi(docTopicSmoothing)
+    finalModel.topicTermCounts.addi(topicTermSmoothing)
+    (finalModel.topicTermCounts.divRowVector(finalModel.topicCounts),
+      finalModel.docTopicCounts.divRowVector(finalModel.docCounts))
   }
 }
 

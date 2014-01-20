@@ -19,7 +19,7 @@ object GibbsSampling {
                         numDocs: Int,
                         numTopics: Int,
                         docTopicSmoothing: Double,
-                        termTopicSmoothing: Double): LDAModel = {
+                        topicTermSmoothing: Double): LDAModel = {
 
     data.cache
 
@@ -35,20 +35,20 @@ object GibbsSampling {
     val docCounts = DoubleMatrix.zeros(numDocs, 1)
     val topicCounts = DoubleMatrix.zeros(numTopics, 1)
     val docTopicCounts = DoubleMatrix.zeros(numDocs, numTopics)
-    val termTopicCounts = DoubleMatrix.zeros(numTerms, numTopics)
+    val topicTermCounts = DoubleMatrix.zeros(numTopics, numTerms)
 
     case class fiveElement(topic: Array[Int], dc: DoubleMatrix, tc: DoubleMatrix, dtc: DoubleMatrix, ttc: DoubleMatrix)
     case class fourElement(dc: DoubleMatrix, tc: DoubleMatrix, dtc: DoubleMatrix, ttc: DoubleMatrix)
 
     // Gibbs sampling
-    Iterator.iterate(LDAModel(docCounts, topicCounts, docTopicCounts, termTopicCounts)) {
+    Iterator.iterate(LDAModel(docCounts, topicCounts, docTopicCounts, topicTermCounts)) {
       case LDAModel(_, _, _, _, true) =>
 
         val nextModel = LDAModel(
           DoubleMatrix.zeros(numDocs, 1),
           DoubleMatrix.zeros(numTopics, 1),
           DoubleMatrix.zeros(numDocs, numTopics),
-          DoubleMatrix.zeros(numTerms, numTopics)
+          DoubleMatrix.zeros(numTopics, numTerms)
         )
 
         val topicAssignAndParams = data.zip(topicAssign).mapPartitions {
@@ -59,10 +59,10 @@ object GibbsSampling {
                 nextModel.docCounts.get(docIdx, 1) += 1
                 nextModel.topicCounts.get(curz, 1) += 1
                 nextModel.docTopicCounts.get(docIdx, curz) += 1
-                nextModel.termTopicCounts.get(word, curz) += 1
+                nextModel.topicTermCounts.get(curz, word) += 1
                 curz
             }
-            Seq(fiveElement(curZIdxs, docCounts, topicCounts, docTopicCounts, termTopicCounts)).toIterator
+            Seq(fiveElement(curZIdxs, docCounts, topicCounts, docTopicCounts, topicTermCounts)).toIterator
         }
 
         topicAssign.unpersist(true)
@@ -96,7 +96,7 @@ object GibbsSampling {
           DoubleMatrix.zeros(numDocs, 1),
           DoubleMatrix.zeros(numTopics, 1),
           DoubleMatrix.zeros(numDocs, numTopics),
-          DoubleMatrix.zeros(numTerms, numTopics)
+          DoubleMatrix.zeros(numTopics, numTerms)
         )
 
         val topicAssignAndParams = data.zip(topicAssign).mapPartitions {
@@ -106,17 +106,17 @@ object GibbsSampling {
                 current.docCounts.get(docIdx, 1) -= 1
                 current.topicCounts.get(prevz, 1) -= 1
                 current.docTopicCounts.get(docIdx, prevz) -= 1
-                current.termTopicCounts.get(word, prevz) -= 1
+                current.topicTermCounts.get(prevz, word) -= 1
 
                 val curz = uniformDistSampler(numTopics)
 
                 nextModel.docCounts.get(docIdx, 1) += 1
                 nextModel.topicCounts.get(curz, 1) += 1
                 nextModel.docTopicCounts.get(docIdx, curz) += 1
-                nextModel.termTopicCounts.get(word, curz) += 1
+                nextModel.topicTermCounts.get(curz, word) += 1
                 curz
             }
-            Seq(fiveElement(curZIdxs, docCounts, topicCounts, docTopicCounts, termTopicCounts)).toIterator
+            Seq(fiveElement(curZIdxs, docCounts, topicCounts, docTopicCounts, topicTermCounts)).toIterator
         }
 
         topicAssign.unpersist(true)
