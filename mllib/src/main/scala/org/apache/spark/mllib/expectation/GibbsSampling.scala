@@ -10,9 +10,9 @@ class GibbsSampling
 
 object GibbsSampling {
 
-  def uniformDistSampler(dimension: Int): Int = Random.nextInt(dimension)
+  private def uniformDistSampler(dimension: Int): Int = Random.nextInt(dimension)
 
-  def dropOneDistSampler(
+  private def dropOneDistSampler(
       model: LDAModel,
       docTopicSmoothing: Double,
       topicTermSmoothing: Double,

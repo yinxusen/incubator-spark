@@ -6,6 +6,7 @@ import org.apache.spark.{SparkContext, Logging}
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.rdd.RDD
 import org.jblas.DoubleMatrix
+import org.apache.spark.mllib.expectation.GibbsSampling
 
 case class LDAModel (
     val docCounts: DoubleMatrix,
@@ -26,8 +27,16 @@ class LDA private (
     var numTerms: Int)
   extends Serializable with Logging
 {
-  def run(input: RDD[SparseVector[Double]], initialParameters: LDAModel): LDAModel = {
-    ???
+  def run(input: RDD[Document]): LDAModel = {
+    GibbsSampling.runGibbsSampling(
+      input,
+      numIteration,
+      1,
+      numTerms,
+      numDocs,
+      numTopics,
+      docTopicSmoothing,
+      topicTermSmoothing)
   }
 
   def solvePhiAndTheta(finalModel: LDAModel): (DoubleMatrix, DoubleMatrix) = {
@@ -42,17 +51,32 @@ class LDA private (
 
 object LDA {
 
-  def train() = ???
+  def train(
+      data: RDD[Document],
+      numTopics: Int,
+      docTopicSmoothing: Double,
+      topicTermSmoothing: Double,
+      numIterations: Int,
+      numDocs: Int,
+      numTerms: Int): (DoubleMatrix, DoubleMatrix) = {
+    val lda = new LDA(numTopics, docTopicSmoothing, topicTermSmoothing, numIterations, numDocs, numTerms)
+    val finalModel = lda.run(data)
+    lda.solvePhiAndTheta(finalModel)
+  }
+
   def main(args: Array[String]) {
     if (args.length != ???) {
       println("Usage: LDA <master> <input_dir> <k> <max_iterations> <mini-split>")
       System.exit(1)
     }
 
-    val (master, inputDir, k, iters, minSplit) = (args(0), args(1), args(2).toInt, args(3).toInt, args(4).toInt)
+    val (master, inputDir, k, iters, minSplit) =
+      (args(0), args(1), args(2).toInt, args(3).toInt, args(4).toInt)
     val sc = new SparkContext(master, "LDA")
-    val data = MLUtils.loadCorpus(sc, inputDir, k, minSplit)
-    val model = LDA.train()
+    val (data, wordMap, docMap) = MLUtils.loadCorpus(sc, inputDir, k, minSplit)
+    val numDocs = docMap.size
+    val numTerms = wordMap.size
+    LDA.train(data, k, 0.01, 0.01, 1000, numDocs, numTerms)
   }
 }
 

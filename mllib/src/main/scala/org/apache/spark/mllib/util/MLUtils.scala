@@ -151,11 +151,11 @@ object MLUtils {
       dir: String,
       numTopics: Int,
       miniSplit: Int):
-    RDD[Document] = {
+    (RDD[Document], Index[String], Index[String]) = {
 
     val wordMap = Index[String]()
     val docMap = Index[String]()
-    sc.textFile(dir, miniSplit).map { line =>
+    val data = sc.textFile(dir, miniSplit).map { line =>
       val splitVersion = splitNameAndContent(line)
       val fileIdx = docMap.index(splitVersion._1)
       val content = new ArrayBuffer[Int]
@@ -164,5 +164,6 @@ object MLUtils {
       }
       Document(fileIdx, content.toArray)
     }
+    (data, wordMap, docMap)
   }
 }
