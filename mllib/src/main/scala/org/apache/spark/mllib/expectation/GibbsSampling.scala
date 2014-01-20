@@ -33,8 +33,8 @@ object GibbsSampling {
     topicThisTerm.mul(topicThisDoc)
     topicThisTerm.divi(topicThisTerm.sum)
     val roulette = Random.nextDouble
-    var sumNow = 0
-    var result = 0
+    var sumNow: Double = 0.0
+    var result: Int = 0
     for (i <- 0 until numTopics) {
       sumNow += topicThisTerm.get(i, 0)
       if (sumNow > roulette) {
@@ -100,10 +100,10 @@ object GibbsSampling {
             content.zip(zIdx).map {
               case (word, _) =>
                 val curz = uniformDistSampler(numTopics)
-                nextModel.docCounts.get(docIdx, 1) += 1
-                nextModel.topicCounts.get(curz, 1) += 1
-                nextModel.docTopicCounts.get(docIdx, curz) += 1
-                nextModel.topicTermCounts.get(curz, word) += 1
+                nextModel.docCounts.put(docIdx, 0, nextModel.docCounts.get(docIdx, 0) + 1)
+                nextModel.topicCounts.put(curz, 0, nextModel.topicCounts.get(curz, 0) + 1)
+                nextModel.docTopicCounts.put(docIdx, curz, nextModel.docTopicCounts.get(docIdx, curz) + 1)
+                nextModel.topicTermCounts.put(curz, word, nextModel.topicTermCounts.get(curz, word) + 1)
                 curz
             }
           }
@@ -159,10 +159,10 @@ object GibbsSampling {
             case (Document(docIdx, content), zIdx) =>
             content.zip(zIdx).map {
               case (word, prevz) =>
-                current.docCounts.get(docIdx, 1) -= 1
-                current.topicCounts.get(prevz, 1) -= 1
-                current.docTopicCounts.get(docIdx, prevz) -= 1
-                current.topicTermCounts.get(prevz, word) -= 1
+                current.docCounts.put(docIdx, 0, current.docCounts.get(docIdx, 0) - 1)
+                current.topicCounts.put(prevz, 0, current.topicCounts.get(prevz, 0) - 1)
+                current.docTopicCounts.put(docIdx, prevz, current.docTopicCounts.get(docIdx, prevz) - 1)
+                current.topicTermCounts.put(prevz, word, current.topicTermCounts.get(prevz, word) - 1)
 
                 val curz = dropOneDistSampler(
                   current,
@@ -173,10 +173,10 @@ object GibbsSampling {
                   word,
                   docIdx)
 
-                nextModel.docCounts.get(docIdx, 1) += 1
-                nextModel.topicCounts.get(curz, 1) += 1
-                nextModel.docTopicCounts.get(docIdx, curz) += 1
-                nextModel.topicTermCounts.get(curz, word) += 1
+                nextModel.docCounts.put(docIdx, 0, nextModel.docCounts.get(docIdx, 0) + 1)
+                nextModel.topicCounts.put(curz, 0, nextModel.topicCounts.get(curz, 0) + 1)
+                nextModel.docTopicCounts.put(docIdx, curz, nextModel.docTopicCounts.get(docIdx, curz) + 1)
+                nextModel.topicTermCounts.put(curz, word, nextModel.topicTermCounts.get(curz, word) + 1)
                 curz
             }
           }

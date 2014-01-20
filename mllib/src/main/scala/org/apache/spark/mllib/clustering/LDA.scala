@@ -1,7 +1,5 @@
 package org.apache.spark.mllib.clustering
 
-import breeze.linalg._
-
 import org.apache.spark.{SparkContext, Logging}
 import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.rdd.RDD
@@ -14,9 +12,7 @@ case class LDAModel (
     val docTopicCounts: DoubleMatrix,
     val topicTermCounts: DoubleMatrix,
     var isInitialisation: Boolean = true)
-  extends Serializable {
-  ???
-}
+  extends Serializable
 
 class LDA private (
     var numTopics: Int,
@@ -59,13 +55,18 @@ object LDA {
       numIterations: Int,
       numDocs: Int,
       numTerms: Int): (DoubleMatrix, DoubleMatrix) = {
-    val lda = new LDA(numTopics, docTopicSmoothing, topicTermSmoothing, numIterations, numDocs, numTerms)
+    val lda = new LDA(numTopics,
+      docTopicSmoothing,
+      topicTermSmoothing,
+      numIterations,
+      numDocs,
+      numTerms)
     val finalModel = lda.run(data)
     lda.solvePhiAndTheta(finalModel)
   }
 
   def main(args: Array[String]) {
-    if (args.length != ???) {
+    if (args.length != 5) {
       println("Usage: LDA <master> <input_dir> <k> <max_iterations> <mini-split>")
       System.exit(1)
     }
@@ -79,6 +80,3 @@ object LDA {
     LDA.train(data, k, 0.01, 0.01, 1000, numDocs, numTerms)
   }
 }
-
-
-// vim: set ts=4 sw=4 et:
