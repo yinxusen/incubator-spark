@@ -12,15 +12,47 @@ object GibbsSampling {
 
   def uniformDistSampler(dimension: Int): Int = Random.nextInt(dimension)
 
+  def dropOneDistSampler(
+      model: LDAModel,
+      docTopicSmoothing: Double,
+      topicTermSmoothing: Double,
+      numTopics: Int,
+      numTerms: Int,
+      termIdx: Int,
+      docIdx: Int): Int = {
+    val topicThisTerm = new DoubleMatrix(numTopics, 1)
+    val topicThisDoc = new DoubleMatrix(numTopics, 1)
+    model.topicTermCounts.getColumn(termIdx, topicThisTerm)
+    model.docTopicCounts.getRow(docIdx, topicThisDoc)
+    topicThisTerm.addi(topicTermSmoothing)
+    topicThisDoc.addi(docTopicSmoothing)
+    val rightFrac = topicThisDoc.sum + numTopics * docTopicSmoothing - 1
+    val leftFrac = model.topicCounts.add(numTerms * topicTermSmoothing)
+    topicThisTerm.divi(leftFrac)
+    topicThisDoc.divi(rightFrac)
+    topicThisTerm.mul(topicThisDoc)
+    topicThisTerm.divi(topicThisTerm.sum)
+    val roulette = Random.nextDouble
+    var sumNow = 0
+    var result = 0
+    for (i <- 0 until numTopics) {
+      sumNow += topicThisTerm.get(i, 0)
+      if (sumNow > roulette) {
+        result = i
+      }
+    }
+    result
+  }
+
   def runGibbsSampling(
-                        data: RDD[Document],
-                        numOuterIterations: Int,
-                        numInnerIterations: Int,
-                        numTerms: Int,
-                        numDocs: Int,
-                        numTopics: Int,
-                        docTopicSmoothing: Double,
-                        topicTermSmoothing: Double): LDAModel = {
+      data: RDD[Document],
+      numOuterIterations: Int,
+      numInnerIterations: Int,
+      numTerms: Int,
+      numDocs: Int,
+      numTopics: Int,
+      docTopicSmoothing: Double,
+      topicTermSmoothing: Double): LDAModel = {
 
     data.cache
 
@@ -38,8 +70,18 @@ object GibbsSampling {
     val docTopicCounts = DoubleMatrix.zeros(numDocs, numTopics)
     val topicTermCounts = DoubleMatrix.zeros(numTopics, numTerms)
 
-    case class fiveElement(topic: Iterator[Array[Int]], dc: DoubleMatrix, tc: DoubleMatrix, dtc: DoubleMatrix, ttc: DoubleMatrix)
-    case class fourElement(dc: DoubleMatrix, tc: DoubleMatrix, dtc: DoubleMatrix, ttc: DoubleMatrix)
+    case class fiveElement(
+        topic: Iterator[Array[Int]],
+        dc: DoubleMatrix,
+        tc: DoubleMatrix,
+        dtc: DoubleMatrix,
+        ttc: DoubleMatrix)
+
+    case class fourElement(
+        dc: DoubleMatrix,
+        tc: DoubleMatrix,
+        dtc: DoubleMatrix,
+        ttc: DoubleMatrix)
 
     // Gibbs sampling
     Iterator.iterate(LDAModel(docCounts, topicCounts, docTopicCounts, topicTermCounts)) {
@@ -65,7 +107,12 @@ object GibbsSampling {
                 curz
             }
           }
-          Seq(fiveElement(parTopicAssign, docCounts, topicCounts, docTopicCounts, topicTermCounts)).toIterator
+          Seq(fiveElement(
+            parTopicAssign,
+            docCounts,
+            topicCounts,
+            docTopicCounts,
+            topicTermCounts)).toIterator
         }
 
         topicAssign.unpersist(true)
@@ -91,7 +138,12 @@ object GibbsSampling {
           case fourElement(_, _, _, x) => x
         }
 
-        LDAModel(dc.reduce(_ addi _), tc.reduce(_ addi _), dtc.reduce(_ addi _), ttc.reduce(_ addi _), false)
+        LDAModel(
+          dc.reduce(_ addi _),
+          tc.reduce(_ addi _),
+          dtc.reduce(_ addi _),
+          ttc.reduce(_ addi _),
+          false)
 
       case current =>
 
@@ -112,7 +164,14 @@ object GibbsSampling {
                 current.docTopicCounts.get(docIdx, prevz) -= 1
                 current.topicTermCounts.get(prevz, word) -= 1
 
-                val curz = uniformDistSampler(numTopics)
+                val curz = dropOneDistSampler(
+                  current,
+                  docTopicSmoothing,
+                  topicTermSmoothing,
+                  numTopics,
+                  numTerms,
+                  word,
+                  docIdx)
 
                 nextModel.docCounts.get(docIdx, 1) += 1
                 nextModel.topicCounts.get(curz, 1) += 1
@@ -121,7 +180,12 @@ object GibbsSampling {
                 curz
             }
           }
-          Seq(fiveElement(parTopicAssign, docCounts, topicCounts, docTopicCounts, topicTermCounts)).toIterator
+          Seq(fiveElement(
+            parTopicAssign,
+            docCounts,
+            topicCounts,
+            docTopicCounts,
+            topicTermCounts)).toIterator
         }
 
 
@@ -149,10 +213,13 @@ object GibbsSampling {
           case fourElement(_, _, _, x) => x
         }
 
-        current.copy(dc.reduce(_ addi _), tc.reduce(_ addi _), dtc.reduce(_ addi _), ttc.reduce(_ addi _), false)
+        current.copy(
+          dc.reduce(_ addi _),
+          tc.reduce(_ addi _),
+          dtc.reduce(_ addi _),
+          ttc.reduce(_ addi _),
+          false)
     }.drop(1).take(numOuterIterations).last
   }
 }
 
-
-// vim: set ts=4 sw=4 et:
