@@ -34,6 +34,8 @@ object GibbsSampling extends Logging {
     topicThisTerm.mul(topicThisDoc)
     topicThisTerm.divi(topicThisTerm.sum)
     val roulette = Random.nextDouble
+    assert(roulette <= 1.0 && roulette >= 0.0)
+    assert(math.abs(topicThisTerm.sum - 1.0) < 0.01)
     var sumNow: Double = 0.0
     var result: Int = 0
     for (i <- 0 until numTopics) {
@@ -164,7 +166,7 @@ object GibbsSampling extends Logging {
         params.map(x => x.topicCounts).reduce(_ addi _),
         params.map(x => x.docTopicCounts).reduce(_ addi _),
         params.map(x => x.topicTermCounts).reduce(_ addi _))
-    }.drop(1).take(numOuterIterations).last
+    }.take(numOuterIterations).last
   }
 }
 
