@@ -10,8 +10,7 @@ case class LDAModel (
     val docCounts: DoubleMatrix,
     val topicCounts: DoubleMatrix,
     val docTopicCounts: DoubleMatrix,
-    val topicTermCounts: DoubleMatrix,
-    var isInitialisation: Boolean = true)
+    val topicTermCounts: DoubleMatrix)
   extends Serializable
 
 class LDA private (
