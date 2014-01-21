@@ -86,7 +86,9 @@ object GibbsSampling extends Logging {
 
     // Gibbs sampling
     Iterator.iterate(LDAModel(docCounts, topicCounts, docTopicCounts, topicTermCounts)) {
+      logInfo("Begin iteration")
       case LDAModel(_, _, _, _, true) =>
+        logInfo("role in initialization mode")
 
         val nextModel = LDAModel(
           DoubleMatrix.zeros(numDocs, 1),
@@ -153,6 +155,7 @@ object GibbsSampling extends Logging {
           false)
 
       case current =>
+        logInfo("role in gibbs sampling stage")
 
         val nextModel = LDAModel(
           DoubleMatrix.zeros(numDocs, 1),
