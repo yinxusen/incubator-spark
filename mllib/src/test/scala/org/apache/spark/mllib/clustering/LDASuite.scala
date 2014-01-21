@@ -38,9 +38,7 @@ class LDASuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("LDA || data clean and text to vector") {
-    val file = s"${new java.io.File(".").getCanonicalPath}/lda.test"
-
-    println(file)
+    val file = "/home/sen/lda"
 
     val (data, wordMap, docMap) = MLUtils.loadCorpus(sc, file, 2)
 

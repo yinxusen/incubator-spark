@@ -154,7 +154,10 @@ object MLUtils {
 
     val wordMap = Index[String]()
     val docMap = Index[String]()
-    val data = sc.textFile(dir, miniSplit).map { line =>
+    val origin = sc.textFile(dir, miniSplit)
+    origin.cache
+    val data = origin.map { line =>
+      println(line)
       val splitVersion = splitNameAndContent(line)
       val fileIdx = docMap.index(splitVersion._1)
       val content = new ArrayBuffer[Int]
