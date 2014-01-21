@@ -10,4 +10,6 @@ package
 assembly
 note
 
-/home/yama/bdas/spark-bsp/sbt/sbt examples/assembly package
+sbt clean assemble-deps
+
+sbt examples/assembly package
