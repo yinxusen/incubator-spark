@@ -82,9 +82,6 @@ object GibbsSampling extends Logging {
           DoubleMatrix.zeros(numTopics, numTerms)
         )
 
-        logInfo(s"new nextModel ${nextModel}")
-        logInfo(s"current iteration ${currentParIter.size}")
-
         val parTopicAssign = currentParIter.map {
           case (Document(docIdx, content), zIdx) =>
             content.zip(zIdx).map {
@@ -98,6 +95,7 @@ object GibbsSampling extends Logging {
                 logInfo(s"next model topic term count is ${nextModel.topicTermCounts.get(curz, word)}")
                 curz
             }
+          case _ => logInfo("Gee.. I don't know why")
         }
         Seq(Pair(parTopicAssign, nextModel)).toIterator
     }
