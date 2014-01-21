@@ -82,6 +82,8 @@ object GibbsSampling extends Logging {
           DoubleMatrix.zeros(numTopics, numTerms)
         )
 
+        logInfo(s"I am here in ${currentParIter.size}")
+
         val parTopicAssign = currentParIter.map { iter =>
           logInfo(s"I am now in ${iter}")
           val curDoc = iter._1
