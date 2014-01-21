@@ -74,7 +74,7 @@ object LDA {
     val (master, inputDir, k, iters, minSplit) =
       (args(0), args(1), args(2).toInt, args(3).toInt, args(4).toInt)
     val sc = new SparkContext(master, "LDA")
-    val (data, wordMap, docMap) = MLUtils.loadCorpus(sc, inputDir, k, minSplit)
+    val (data, wordMap, docMap) = MLUtils.loadCorpus(sc, inputDir, minSplit)
     val numDocs = docMap.size
     val numTerms = wordMap.size
     LDA.train(data, k, 0.01, 0.01, 1000, numDocs, numTerms)

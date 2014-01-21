@@ -149,7 +149,6 @@ object MLUtils {
   def loadCorpus(
       sc: SparkContext,
       dir: String,
-      numTopics: Int,
       miniSplit: Int):
     (RDD[Document], Index[String], Index[String]) = {
 
