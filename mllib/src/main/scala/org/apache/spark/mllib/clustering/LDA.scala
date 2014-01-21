@@ -54,15 +54,15 @@ object LDA {
       topicTermSmoothing: Double,
       numIterations: Int,
       numDocs: Int,
-      numTerms: Int): (DoubleMatrix, DoubleMatrix) = {
+      numTerms: Int): LDAModel = {
     val lda = new LDA(numTopics,
       docTopicSmoothing,
       topicTermSmoothing,
       numIterations,
       numDocs,
       numTerms)
-    val finalModel = lda.run(data)
-    lda.solvePhiAndTheta(finalModel)
+    lda.run(data)
+    // lda.solvePhiAndTheta(finalModel)
   }
 
   def main(args: Array[String]) {
@@ -77,6 +77,6 @@ object LDA {
     val (data, wordMap, docMap) = MLUtils.loadCorpus(sc, inputDir, minSplit)
     val numDocs = docMap.size
     val numTerms = wordMap.size
-    LDA.train(data, k, 0.01, 0.01, 1000, numDocs, numTerms)
+    LDA.train(data, k, 0.01, 0.01, iters, numDocs, numTerms)
   }
 }

@@ -2,13 +2,14 @@ package org.apache.spark.mllib.expectation
 
 import org.apache.spark.rdd.RDD
 import org.jblas.DoubleMatrix
-import breeze.util.Implicits._
 import scala.util._
+import org.apache.spark.Logging
 import org.apache.spark.mllib.clustering.{LDAModel, Document}
+import breeze.util.Implicits._
 
 class GibbsSampling
 
-object GibbsSampling {
+object GibbsSampling extends Logging {
 
   private def uniformDistSampler(dimension: Int): Int = Random.nextInt(dimension)
 
@@ -95,24 +96,30 @@ object GibbsSampling {
         )
 
         val topicAssignAndParams = data.zip(topicAssign).mapPartitions { currentParIter =>
+          logDebug("Hi I am here.")
           val parTopicAssign = currentParIter.map {
             case (Document(docIdx, content), zIdx) =>
             content.zip(zIdx).map {
               case (word, _) =>
                 val curz = uniformDistSampler(numTopics)
+                logInfo(s"Uniform sampling get $curz")
                 nextModel.docCounts.put(docIdx, 0, nextModel.docCounts.get(docIdx, 0) + 1)
                 nextModel.topicCounts.put(curz, 0, nextModel.topicCounts.get(curz, 0) + 1)
                 nextModel.docTopicCounts.put(docIdx, curz, nextModel.docTopicCounts.get(docIdx, curz) + 1)
                 nextModel.topicTermCounts.put(curz, word, nextModel.topicTermCounts.get(curz, word) + 1)
+                logInfo(s"next model doc count is ${nextModel.docCounts.get(docIdx, 0)}")
+                logInfo(s"next model topic count is ${nextModel.topicCounts.get(curz, 0)}")
+                logInfo(s"next model doc topic count is ${nextModel.docTopicCounts.get(docIdx, curz)}")
+                logInfo(s"next model topic term count is ${nextModel.topicTermCounts.get(curz, word)}")
                 curz
             }
           }
           Seq(fiveElement(
             parTopicAssign,
-            docCounts,
-            topicCounts,
-            docTopicCounts,
-            topicTermCounts)).toIterator
+            nextModel.docCounts,
+            nextModel.topicCounts,
+            nextModel.docTopicCounts,
+            nextModel.topicTermCounts)).toIterator
         }
 
         topicAssign.unpersist(true)

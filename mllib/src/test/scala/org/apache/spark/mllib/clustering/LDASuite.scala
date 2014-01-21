@@ -38,11 +38,13 @@ class LDASuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("LDA || data clean and text to vector") {
-    val file = "/home/sen/lda"
+    val file = "./lda.test"
 
     val (data, wordMap, docMap) = MLUtils.loadCorpus(sc, file, 2)
 
     assert(wordMap.size == 428)
     assert(docMap.size == 5)
   }
+
+
 }
