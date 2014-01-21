@@ -83,6 +83,7 @@ object GibbsSampling extends Logging {
         )
 
         val parTopicAssign = currentParIter.map { iter =>
+          logInfo(s"I am now in ${iter}")
           val curDoc = iter._1
           val zIdx = iter._2
           curDoc.content.zip(zIdx).map { x =>
