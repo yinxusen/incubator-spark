@@ -95,7 +95,9 @@ object GibbsSampling extends Logging {
                 logInfo(s"next model topic term count is ${nextModel.topicTermCounts.get(curz, word)}")
                 curz
             }
-          case _ => logInfo("Gee.. I don't know why")
+          case _ =>
+            logInfo("Gee.. I don't know why")
+            0
         }
         Seq(Pair(parTopicAssign, nextModel)).toIterator
     }
