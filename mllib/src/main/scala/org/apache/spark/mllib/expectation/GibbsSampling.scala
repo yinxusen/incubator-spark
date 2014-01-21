@@ -110,6 +110,12 @@ object GibbsSampling extends Logging {
       params.map(x => x.docTopicCounts).reduce(_ addi _),
       params.map(x => x.topicTermCounts).reduce(_ addi _))
 
+    logInfo(s"initial model doc count is ${initialModel.docCounts}")
+    logInfo(s"initial model topic count is ${initialModel.topicCounts}")
+    logInfo(s"initial model doc-topic count is ${initialModel.docTopicCounts}")
+    logInfo(s"initial model topic-term count is ${initialModel.topicTermCounts}")
+
+
     // Gibbs sampling
     Iterator.iterate(initialModel) { current =>
       logInfo("role in gibbs sampling stage")

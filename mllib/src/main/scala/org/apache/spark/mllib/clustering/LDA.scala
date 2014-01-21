@@ -76,6 +76,11 @@ object LDA {
     val (data, wordMap, docMap) = MLUtils.loadCorpus(sc, inputDir, minSplit)
     val numDocs = docMap.size
     val numTerms = wordMap.size
-    LDA.train(data, k, 0.01, 0.01, iters, numDocs, numTerms)
+    val model = LDA.train(data, k, 0.01, 0.01, iters, numDocs, numTerms)
+    println(s"initial model doc count is ${model.docCounts}")
+    println(s"initial model topic count is ${model.topicCounts}")
+    println(s"initial model doc-topic count is ${model.docTopicCounts}")
+    println(s"initial model topic-term count is ${model.topicTermCounts}")
+
   }
 }
