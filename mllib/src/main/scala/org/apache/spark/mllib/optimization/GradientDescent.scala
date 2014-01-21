@@ -197,7 +197,7 @@ object GradientDescent extends Logging {
           }.reduce((a, b) => (a._1.addi(b._1), a._2 + b._2))
 
           localLossHistory.append(lossSum / miniBatchSize + regVal)
-          val update = updater.compute(weights, gradientSum.div(miniBatchSize), stepSize, (i - 1) + numOuterIterations + j, regParam)
+          val update = updater.compute(weights, gradientSum.div(miniBatchSize), stepSize, (i - 1) * numOuterIterations + j, regParam)
           weights = update._1
           regVal = update._2
         }

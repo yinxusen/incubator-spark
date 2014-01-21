@@ -461,6 +461,7 @@ private[spark] class Master(host: String, port: Int, webUiPort: Int) extends Act
     // Right now this is a very simple FIFO scheduler. We keep trying to fit in the first app
     // in the queue, then the second app, etc.
     if (spreadOutApps) {
+      logInfo("pyramid - using all the nodes")
       // Try to spread out each app among all the nodes, until it has all its cores
       for (app <- waitingApps if app.coresLeft > 0) {
         val usableWorkers = workers.toArray.filter(_.state == WorkerState.ALIVE)
@@ -486,6 +487,7 @@ private[spark] class Master(host: String, port: Int, webUiPort: Int) extends Act
         }
       }
     } else {
+      logInfo("pyramid - using few nodes")
       // Pack each app into as few nodes as possible until we've assigned all its cores
       for (worker <- workers if worker.coresFree > 0 && worker.state == WorkerState.ALIVE) {
         for (app <- waitingApps if app.coresLeft > 0) {

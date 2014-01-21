@@ -1,5 +1,5 @@
 # A Spark Worker will be started on each of the machines listed below.
-queen
+#queen
 h38 
 h39 
 h40 
