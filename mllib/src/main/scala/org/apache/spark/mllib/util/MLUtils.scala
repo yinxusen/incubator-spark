@@ -154,18 +154,33 @@ object MLUtils {
 
     val wordMap = Index[String]()
     val docMap = Index[String]()
-    val origin = sc.textFile(dir, miniSplit)
-    origin.cache
-    val data = origin.map { line =>
-      println(line)
+
+    val almostData = sc.textFile(dir, miniSplit)
+
+    almostData.map { line =>
+      val (fileName, _) = splitNameAndContent(line)
+      fileName
+    }.distinct.collect.map(x => docMap.index(x))
+
+    almostData.flatMap { line =>
+      val (_, content) = splitNameAndContent(line)
+      JavaWordTokenizer(content).filter(x => x(0).isLetter)
+    }.distinct.collect.map(x => wordMap.index(x))
+
+    val broadcastWordMap = sc.broadcast(wordMap)
+    val broadcastDocMap = sc.broadcast(docMap)
+
+    val data = almostData.map { line =>
       val splitVersion = splitNameAndContent(line)
-      val fileIdx = docMap.index(splitVersion._1)
+      val fileIdx = broadcastDocMap.value.index(splitVersion._1)
       val content = new ArrayBuffer[Int]
       for (token <- JavaWordTokenizer(splitVersion._2) if token(0).isLetter) {
-        content.append(wordMap.index(token))
+        content.append(broadcastWordMap.value.index(token))
       }
       Document(fileIdx, content.toArray)
     }
+
+    // I must send a job to do data clean
     (data, wordMap, docMap)
   }
 }

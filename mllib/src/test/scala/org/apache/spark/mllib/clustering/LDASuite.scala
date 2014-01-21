@@ -42,9 +42,6 @@ class LDASuite extends FunSuite with BeforeAndAfterAll {
 
     val (data, wordMap, docMap) = MLUtils.loadCorpus(sc, file, 2)
 
-    println(wordMap.size)
-    println(wordMap)
-
     assert(wordMap.size == 428)
     assert(docMap.size == 5)
   }
