@@ -82,22 +82,20 @@ object GibbsSampling extends Logging {
           DoubleMatrix.zeros(numTopics, numTerms)
         )
 
-        val parTopicAssign = currentParIter.map {
-          case (Document(docIdx, content), zIdx) =>
-            content.zip(zIdx).map {
-              case (word, _) =>
-                val curz = uniformDistSampler(numTopics)
-                logInfo(s"Uniform sampling get $curz")
-                updateOnce(nextModel, docIdx, word, curz, +1)
-                logInfo(s"next model doc count is ${nextModel.docCounts.get(docIdx, 0)}")
-                logInfo(s"next model topic count is ${nextModel.topicCounts.get(curz, 0)}")
-                logInfo(s"next model doc topic count is ${nextModel.docTopicCounts.get(docIdx, curz)}")
-                logInfo(s"next model topic term count is ${nextModel.topicTermCounts.get(curz, word)}")
-                curz
-            }
-          case _ =>
-            logInfo("Gee.. I don't know why")
-            0
+        val parTopicAssign = currentParIter.map { iter =>
+          val curDoc = iter._1
+          val zIdx = iter._2
+          curDoc.content.zip(zIdx).map { x =>
+            val word = x._1
+            val curz = uniformDistSampler(numTopics)
+            logInfo(s"Uniform sampling get $curz")
+            updateOnce(nextModel, curDoc.docIdx, word, curz, +1)
+            logInfo(s"next model doc count is ${nextModel.docCounts.get(curDoc.docIdx, 0)}")
+            logInfo(s"next model topic count is ${nextModel.topicCounts.get(curz, 0)}")
+            logInfo(s"next model doc topic count is ${nextModel.docTopicCounts.get(curDoc.docIdx, curz)}")
+            logInfo(s"next model topic term count is ${nextModel.topicTermCounts.get(curz, word)}")
+            curz
+          }
         }
         Seq(Pair(parTopicAssign, nextModel)).toIterator
     }
