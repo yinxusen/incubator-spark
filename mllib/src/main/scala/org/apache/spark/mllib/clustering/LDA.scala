@@ -77,10 +77,10 @@ object LDA {
     val numDocs = docMap.size
     val numTerms = wordMap.size
     val model = LDA.train(data, k, 0.01, 0.01, iters, numDocs, numTerms)
-    println(s"initial model doc count is ${model.docCounts}")
-    println(s"initial model topic count is ${model.topicCounts}")
-    println(s"initial model doc-topic count is ${model.docTopicCounts}")
-    println(s"initial model topic-term count is ${model.topicTermCounts}")
+    println(s"final model doc count is ${model.docCounts}")
+    println(s"final model topic count is ${model.topicCounts}")
+    println(s"final model doc-topic count is ${model.docTopicCounts}")
+    println(s"final model topic-term count is ${model.topicTermCounts}")
 
   }
 }
