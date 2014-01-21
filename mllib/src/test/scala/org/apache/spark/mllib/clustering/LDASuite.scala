@@ -45,7 +45,7 @@ class LDASuite extends FunSuite with BeforeAndAfterAll {
     println(wordMap.size)
     println(wordMap)
 
-    assert(wordMap.size == 100)
+    assert(wordMap.size == 428)
     assert(docMap.size == 5)
   }
 }
