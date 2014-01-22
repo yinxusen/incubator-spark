@@ -149,13 +149,19 @@ object MLUtils {
   def loadCorpus(
       sc: SparkContext,
       dir: String,
-      miniSplit: Int):
+      miniSplit: Int,
+      dirStopWords: String = "./english.stop.txt"):
     (RDD[Document], Index[String], Index[String]) = {
 
     val wordMap = Index[String]()
     val docMap = Index[String]()
 
     val almostData = sc.textFile(dir, miniSplit)
+
+    val stopWords = sc.textFile(dirStopWords, miniSplit).
+      map(x => x.replaceAll("""(?m)\s+$""", "")).distinct.collect.toSet
+
+    val broadcastStopWord = sc.broadcast(stopWords)
 
     almostData.map { line =>
       val (fileName, _) = splitNameAndContent(line)
@@ -164,8 +170,9 @@ object MLUtils {
 
     almostData.flatMap { line =>
       val (_, content) = splitNameAndContent(line)
-      JavaWordTokenizer(content).filter(x => x(0).isLetter)
+      JavaWordTokenizer(content).filter(x => x(0).isLetter && ! broadcastStopWord.value.contains(x))
     }.distinct.collect.map(x => wordMap.index(x))
+
 
     val broadcastWordMap = sc.broadcast(wordMap)
     val broadcastDocMap = sc.broadcast(docMap)
@@ -174,7 +181,8 @@ object MLUtils {
       val splitVersion = splitNameAndContent(line)
       val fileIdx = broadcastDocMap.value.index(splitVersion._1)
       val content = new ArrayBuffer[Int]
-      for (token <- JavaWordTokenizer(splitVersion._2) if token(0).isLetter) {
+      for (token <- JavaWordTokenizer(splitVersion._2)
+        if (token(0).isLetter && ! broadcastStopWord.value.contains(token))) {
         content.append(broadcastWordMap.value.index(token))
       }
       Document(fileIdx, content.toArray)
