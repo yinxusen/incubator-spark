@@ -6,10 +6,13 @@ import scala.util._
 import org.apache.spark.Logging
 import org.apache.spark.mllib.clustering.{LDAModel, Document}
 import breeze.util.Implicits._
+import scala.util.control.Breaks
 
 class GibbsSampling
 
 object GibbsSampling extends Logging {
+
+  val mybreaks = new Breaks
 
   private def uniformDistSampler(dimension: Int): Int = Random.nextInt(dimension)
 
@@ -18,10 +21,13 @@ object GibbsSampling extends Logging {
     val roulette = Random.nextDouble
     var sumNow: Double = 0.0
     var result: Int = 0
-    for (i <- 0 until dimension) {
-      sumNow += dist.get(i, 0)
-      if (sumNow > roulette) {
-        result = i
+    mybreaks.breakable {
+      for (i <- 0 until dimension) {
+        sumNow += dist.get(i, 0)
+        if (sumNow > roulette) {
+          result = i
+          mybreaks.break
+        }
       }
     }
     result
@@ -41,11 +47,8 @@ object GibbsSampling extends Logging {
     model.docTopicCounts.getRow(docIdx, topicThisDoc)
     topicThisTerm.addi(topicTermSmoothing)
     topicThisDoc.addi(docTopicSmoothing)
-    // val rightFrac = topicThisDoc.sum + numTopics * docTopicSmoothing
-    // val rightFrac = 1.0
     val leftFrac = model.topicCounts.add(numTerms * topicTermSmoothing)
     topicThisTerm.divi(leftFrac)
-    // topicThisDoc.divi(rightFrac)
     topicThisTerm.muli(topicThisDoc)
     topicThisTerm.divi(topicThisTerm.sum)
     multinomialDistSampler(topicThisTerm)
