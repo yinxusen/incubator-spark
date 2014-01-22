@@ -166,7 +166,7 @@ object GibbsSampling extends Logging {
         params.map(x => x.topicCounts).reduce(_ addi _),
         params.map(x => x.docTopicCounts).reduce(_ addi _),
         params.map(x => x.topicTermCounts).reduce(_ addi _))
-    }.take(numOuterIterations).last
+    }.drop(1).take(numOuterIterations).last
   }
 }
 
