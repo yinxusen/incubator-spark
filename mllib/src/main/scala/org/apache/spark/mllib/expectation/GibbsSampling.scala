@@ -161,7 +161,7 @@ object GibbsSampling extends Logging {
 
       val params = topicAssignAndParams.map(x => x._2).collect
 
-      LDAModel(
+      current.copy(
         params.map(x => x.docCounts).reduce(_ addi _),
         params.map(x => x.topicCounts).reduce(_ addi _),
         params.map(x => x.docTopicCounts).reduce(_ addi _),
