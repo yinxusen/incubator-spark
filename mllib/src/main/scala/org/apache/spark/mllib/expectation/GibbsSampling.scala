@@ -1,12 +1,15 @@
 package org.apache.spark.mllib.expectation
 
-import org.apache.spark.rdd.RDD
 import org.jblas.DoubleMatrix
+
 import scala.util._
+import scala.util.control.Breaks
+
+import breeze.util.Implicits._
+
+import org.apache.spark.rdd.RDD
 import org.apache.spark.Logging
 import org.apache.spark.mllib.clustering.{LDAModel, Document}
-import breeze.util.Implicits._
-import scala.util.control.Breaks
 
 class GibbsSampling
 
@@ -18,7 +21,7 @@ object GibbsSampling extends Logging {
 
   private def multinomialDistSampler(dist: DoubleMatrix): Int = {
     val dimension = dist.length
-    val roulette = Random.nextDouble
+    val roulette = Random.nextDouble()
     var sumNow: Double = 0.0
     var result: Int = 0
     mybreaks.breakable {
@@ -26,7 +29,7 @@ object GibbsSampling extends Logging {
         sumNow += dist.get(i, 0)
         if (sumNow > roulette) {
           result = i
-          mybreaks.break
+          mybreaks.break()
         }
       }
     }
@@ -47,8 +50,8 @@ object GibbsSampling extends Logging {
     model.docTopicCounts.getRow(docIdx, topicThisDoc)
     topicThisTerm.addi(topicTermSmoothing)
     topicThisDoc.addi(docTopicSmoothing)
-    val leftFrac = model.topicCounts.add(numTerms * topicTermSmoothing)
-    topicThisTerm.divi(leftFrac)
+    val fraction = model.topicCounts.add(numTerms * topicTermSmoothing)
+    topicThisTerm.divi(fraction)
     topicThisTerm.muli(topicThisDoc)
     topicThisTerm.divi(topicThisTerm.sum)
     multinomialDistSampler(topicThisTerm)
@@ -71,17 +74,14 @@ object GibbsSampling extends Logging {
       docTopicSmoothing: Double,
       topicTermSmoothing: Double): LDAModel = {
 
-    data.cache
+    data.cache()
 
     // construct topic assignment RDD
-    var topicAssign = data.map(x => x.content.map(_ => 0))
-
-    topicAssign.cache
+    var topicAssign = data.map(x => x.content.map(_ => 0)).cache()
 
     logInfo("role in initialization mode")
 
     val topicAssignAndParams = data.zip(topicAssign).mapPartitions { currentParIter =>
-
       val currentParData = currentParIter.toArray
 
       val nextModel = LDAModel(
@@ -102,25 +102,19 @@ object GibbsSampling extends Logging {
         }
       }
       Seq(Pair(parTopicAssign, nextModel)).iterator
-    }.cache
+    }.cache()
 
-    topicAssign.unpersist(true)
+    topicAssign.unpersist()
     topicAssign = topicAssignAndParams.flatMap(x => x._1)
-    topicAssign.cache
+    topicAssign.cache()
 
-    val params = topicAssignAndParams.map(x => x._2).collect
+    val params = topicAssignAndParams.map(x => x._2).collect()
 
     val initialModel = LDAModel(
       params.map(x => x.docCounts).reduce(_ addi _),
       params.map(x => x.topicCounts).reduce(_ addi _),
       params.map(x => x.docTopicCounts).reduce(_ addi _),
       params.map(x => x.topicTermCounts).reduce(_ addi _))
-
-    logInfo(s"initial model doc count is ${initialModel.docCounts}")
-    logInfo(s"initial model topic count is ${initialModel.topicCounts}")
-    logInfo(s"initial model doc-topic count is ${initialModel.docTopicCounts}")
-    logInfo(s"initial model topic-term count is ${initialModel.topicTermCounts}")
-
 
     // Gibbs sampling
     Iterator.iterate(initialModel) { current =>
@@ -157,13 +151,13 @@ object GibbsSampling extends Logging {
           }
         }
         Seq(Pair(parTopicAssign, nextModel)).toIterator
-      }.cache
+      }.cache()
 
-      topicAssign.unpersist(true)
+      topicAssign.unpersist()
       topicAssign = topicAssignAndParams.flatMap(x => x._1)
-      topicAssign.cache
+      topicAssign.cache()
 
-      val params = topicAssignAndParams.map(x => x._2).collect
+      val params = topicAssignAndParams.map(x => x._2).collect()
 
       current.copy(
         params.map(x => x.docCounts).reduce(_ addi _),
