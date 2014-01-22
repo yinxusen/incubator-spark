@@ -13,6 +13,20 @@ object GibbsSampling extends Logging {
 
   private def uniformDistSampler(dimension: Int): Int = Random.nextInt(dimension)
 
+  private def multinomialDistSampler(dist: DoubleMatrix): Int = {
+    val dimension = dist.length
+    val roulette = Random.nextDouble
+    var sumNow: Double = 0.0
+    var result: Int = 0
+    for (i <- 0 until dimension) {
+      sumNow += dist.get(i, 0)
+      if (sumNow > roulette) {
+        result = i
+      }
+    }
+    result
+  }
+
   private def dropOneDistSampler(
       model: LDAModel,
       docTopicSmoothing: Double,
@@ -27,22 +41,14 @@ object GibbsSampling extends Logging {
     model.docTopicCounts.getRow(docIdx, topicThisDoc)
     topicThisTerm.addi(topicTermSmoothing)
     topicThisDoc.addi(docTopicSmoothing)
-    val rightFrac = topicThisDoc.sum + numTopics * docTopicSmoothing - 1
+    // val rightFrac = topicThisDoc.sum + numTopics * docTopicSmoothing
+    // val rightFrac = 1.0
     val leftFrac = model.topicCounts.add(numTerms * topicTermSmoothing)
     topicThisTerm.divi(leftFrac)
-    topicThisDoc.divi(rightFrac)
+    // topicThisDoc.divi(rightFrac)
     topicThisTerm.muli(topicThisDoc)
     topicThisTerm.divi(topicThisTerm.sum)
-    val roulette = Random.nextDouble
-    var sumNow: Double = 0.0
-    var result: Int = 0
-    for (i <- 0 until numTopics) {
-      sumNow += topicThisTerm.get(i, 0)
-      if (sumNow > roulette) {
-        result = i
-      }
-    }
-    result
+    multinomialDistSampler(topicThisTerm)
   }
 
   private def updateOnce(model: LDAModel, docIdx: Int, word: Int, curz: Int, updater: Int) {
