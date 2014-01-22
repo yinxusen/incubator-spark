@@ -31,11 +31,9 @@ object GibbsSampling extends Logging {
     val leftFrac = model.topicCounts.add(numTerms * topicTermSmoothing)
     topicThisTerm.divi(leftFrac)
     topicThisDoc.divi(rightFrac)
-    topicThisTerm.mul(topicThisDoc)
+    topicThisTerm.muli(topicThisDoc)
     topicThisTerm.divi(topicThisTerm.sum)
     val roulette = Random.nextDouble
-    assert(roulette <= 1.0 && roulette >= 0.0)
-    assert(math.abs(topicThisTerm.sum - 1.0) < 0.01)
     var sumNow: Double = 0.0
     var result: Int = 0
     for (i <- 0 until numTopics) {
@@ -67,10 +65,7 @@ object GibbsSampling extends Logging {
     data.cache
 
     // construct topic assignment RDD
-    var topicAssign = data.map {
-      case Document(docIdx, content) =>
-        content.map(_ => 0)
-    }
+    var topicAssign = data.map(x => x.content.map(_ => 0))
 
     topicAssign.cache
 
@@ -98,7 +93,7 @@ object GibbsSampling extends Logging {
         }
       }
       Seq(Pair(parTopicAssign, nextModel)).iterator
-    }
+    }.cache
 
     topicAssign.unpersist(true)
     topicAssign = topicAssignAndParams.flatMap(x => x._1)
@@ -153,7 +148,7 @@ object GibbsSampling extends Logging {
           }
         }
         Seq(Pair(parTopicAssign, nextModel)).toIterator
-      }
+      }.cache
 
       topicAssign.unpersist(true)
       topicAssign = topicAssignAndParams.flatMap(x => x._1)
