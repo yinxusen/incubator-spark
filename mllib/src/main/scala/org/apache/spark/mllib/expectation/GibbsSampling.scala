@@ -22,7 +22,7 @@ object GibbsSampling extends Logging {
    * @param dimension
    * @return
    */
-  private def uniformDistSampler(dimension: Int): Int = Random.nextInt(dimension)
+  private def uniformDistSampler(rand: Random, dimension: Int): Int = rand.nextInt(dimension)
 
   /**
    * This is a multinomial distribution sampler.
@@ -30,9 +30,9 @@ object GibbsSampling extends Logging {
    * @param dist
    * @return
    */
-  private def multinomialDistSampler(dist: DoubleMatrix): Int = {
+  private def multinomialDistSampler(rand: Random, dist: DoubleMatrix): Int = {
     val dimension = dist.length
-    val roulette = Random.nextDouble()
+    val roulette = rand.nextDouble()
     var sumNow: Double = 0.0
     var result: Int = 0
     mybreaks.breakable {
@@ -68,7 +68,8 @@ object GibbsSampling extends Logging {
       numTopics: Int,
       numTerms: Int,
       termIdx: Int,
-      docIdx: Int): Int = {
+      docIdx: Int,
+      rand: Random): Int = {
     val topicThisTerm = new DoubleMatrix(numTopics, 1)
     val topicThisDoc = new DoubleMatrix(numTopics, 1)
     model.topicTermCounts.getColumn(termIdx, topicThisTerm)
@@ -79,7 +80,7 @@ object GibbsSampling extends Logging {
     topicThisTerm.divi(fraction)
     topicThisTerm.muli(topicThisDoc)
     topicThisTerm.divi(topicThisTerm.sum)
-    multinomialDistSampler(topicThisTerm)
+    multinomialDistSampler(rand, topicThisTerm)
   }
 
   /**
@@ -139,18 +140,19 @@ object GibbsSampling extends Logging {
         DoubleMatrix.zeros(numTopics, numTerms)
       )
 
-      val parTopicAssign = currentParData.map { iter =>
-        val curDoc = iter._1
-        val zIdx = iter._2
+      val parTopicAssign = currentParData.zipWithIndex.map { iter =>
+        val curDoc = iter._1._1
+        val zIdx = iter._1._2
+        val rand = new Random(42+iter._2)
         curDoc.content.zip(zIdx).map { x =>
           val word = x._1
-          val curz = uniformDistSampler(numTopics)
+          val curz = uniformDistSampler(rand, numTopics)
           updateOnce(nextModel, curDoc.docIdx, word, curz, +1)
           curz
         }
       }
       Seq(Pair(parTopicAssign, nextModel)).iterator
-    }.cache()
+    }
 
     topicAssign.unpersist()
     topicAssign = topicAssignAndParams.flatMap(x => x._1)
@@ -165,8 +167,11 @@ object GibbsSampling extends Logging {
       params.map(x => x.topicTermCounts).reduce(_ addi _))
 
     // Gibbs sampling
+    var randSeedSalt = 1
     Iterator.iterate(initialModel) { current =>
       logInfo("role in gibbs sampling stage")
+
+      randSeedSalt += 1
 
       val topicAssignAndParams = data.zip(topicAssign).mapPartitions { currentParIter =>
         val currentParData = currentParIter.toArray
@@ -178,9 +183,10 @@ object GibbsSampling extends Logging {
           DoubleMatrix.zeros(numTopics, numTerms)
         )
 
-        val parTopicAssign = currentParData.map { iter =>
-          val curDoc = iter._1
-          val zIdx = iter._2
+        val parTopicAssign = currentParData.zipWithIndex.map { iter =>
+          val curDoc = iter._1._1
+          val zIdx = iter._1._2
+          val rand = new Random(42 + randSeedSalt * numOuterIterations + iter._2)
           curDoc.content.zip(zIdx).map { x =>
             val word = x._1
             val prevz = x._2
@@ -192,14 +198,15 @@ object GibbsSampling extends Logging {
               numTopics,
               numTerms,
               word,
-              curDoc.docIdx)
+              curDoc.docIdx,
+              rand)
             updateOnce(current, curDoc.docIdx, word, curz, +1)
             updateOnce(nextModel, curDoc.docIdx, word, curz, +1)
             curz
           }
         }
         Seq(Pair(parTopicAssign, nextModel)).toIterator
-      }.cache()
+      }
 
       topicAssign.unpersist()
       topicAssign = topicAssignAndParams.flatMap(x => x._1)
