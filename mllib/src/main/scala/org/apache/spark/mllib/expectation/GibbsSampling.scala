@@ -181,5 +181,14 @@ object GibbsSampling extends Logging {
     (topicTermCnt.divColumnVector(topicCnt),
       docTopicCnt.divColumnVector(docCnt))
   }
+
+  def perplexity(data: RDD[Document], phi: DoubleMatrix, theta: DoubleMatrix): Double = {
+    val (pword, totalNum) = data.map { doc =>
+      val currentTheta = theta.getRow(doc.docIdx).mmul(phi)
+      doc.content.map(x => (math.log(currentTheta.get(x)), 1))
+        .reduce((a, b) => (a._1 + b._1, a._2 + b._2))
+    }.reduce((a, b) => (a._1 + b._1, a._2 + b._2))
+    math.exp(-1 * pword / totalNum)
+  }
 }
 
