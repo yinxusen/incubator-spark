@@ -17,8 +17,19 @@ object GibbsSampling extends Logging {
 
   val mybreaks = new Breaks
 
+  /**
+   * This is a uniform distribution sampler, which is only used for the initialization.
+   * @param dimension
+   * @return
+   */
   private def uniformDistSampler(dimension: Int): Int = Random.nextInt(dimension)
 
+  /**
+   * This is a multinomial distribution sampler.
+   * I use a roulette method to sample an Int back.
+   * @param dist
+   * @return
+   */
   private def multinomialDistSampler(dist: DoubleMatrix): Int = {
     val dimension = dist.length
     val roulette = Random.nextDouble()
@@ -36,6 +47,20 @@ object GibbsSampling extends Logging {
     result
   }
 
+  /**
+   * I use this function to compute the new distribution after drop one from current document.
+   * This is a really essential part of Gibbs sampling for LDA, you can refer to the paper:
+   * <I>Parameter estimation for text analysis</I>
+   * In the end, I call multinomialDistSampler to sample a figure out.
+   * @param model
+   * @param docTopicSmoothing
+   * @param topicTermSmoothing
+   * @param numTopics
+   * @param numTerms
+   * @param termIdx
+   * @param docIdx
+   * @return
+   */
   private def dropOneDistSampler(
       model: LDAModel,
       docTopicSmoothing: Double,
@@ -57,6 +82,15 @@ object GibbsSampling extends Logging {
     multinomialDistSampler(topicThisTerm)
   }
 
+  /**
+   * This method is used for update LDAModel once.
+   * Updater can be +1 or -1.
+   * @param model
+   * @param docIdx
+   * @param word
+   * @param curz
+   * @param updater
+   */
   private def updateOnce(model: LDAModel, docIdx: Int, word: Int, curz: Int, updater: Int) {
     model.docCounts.put(docIdx, 0, model.docCounts.get(docIdx, 0) + updater)
     model.topicCounts.put(curz, 0, model.topicCounts.get(curz, 0) + updater)
@@ -64,6 +98,20 @@ object GibbsSampling extends Logging {
     model.topicTermCounts.put(curz, word, model.topicTermCounts.get(curz, word) + updater)
   }
 
+  /**
+   * Main function of running a Gibbs sampling method.
+   * It contains two phases of total Gibbs sampling:
+   * first is initialization, second is real sampling.
+   * @param data
+   * @param numOuterIterations
+   * @param numInnerIterations
+   * @param numTerms
+   * @param numDocs
+   * @param numTopics
+   * @param docTopicSmoothing
+   * @param topicTermSmoothing
+   * @return
+   */
   def runGibbsSampling(
       data: RDD[Document],
       numOuterIterations: Int,
@@ -167,7 +215,16 @@ object GibbsSampling extends Logging {
     }.drop(1).take(numOuterIterations).last
   }
 
-
+  /**
+   * We use LDAModel to infer parameters Phi and Theta.
+   * Just a two simple equations.
+   * @param model
+   * @param numTopics
+   * @param numTerms
+   * @param docTopicSmoothing
+   * @param topicTermSmoothing
+   * @return
+   */
   def solvePhiAndTheta(
       model: LDAModel,
       numTopics: Int,
@@ -182,6 +239,16 @@ object GibbsSampling extends Logging {
       docTopicCnt.divColumnVector(docCnt))
   }
 
+  /**
+   * Perplexity is a kind of evaluation method of LDA. Usually it is used on unseen data.
+   * But here we use it for current documents, which is also OK.
+   * If using it on unseen data, you must do an iteration of Gibbs sampling before calling this.
+   * Small perplexiy means good result.
+   * @param data
+   * @param phi
+   * @param theta
+   * @return
+   */
   def perplexity(data: RDD[Document], phi: DoubleMatrix, theta: DoubleMatrix): Double = {
     val (pword, totalNum) = data.map { doc =>
       val currentTheta = theta.getRow(doc.docIdx).mmul(phi)

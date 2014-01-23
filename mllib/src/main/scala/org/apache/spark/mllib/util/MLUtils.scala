@@ -170,9 +170,9 @@ object MLUtils {
 
     almostData.flatMap { line =>
       val (_, content) = splitNameAndContent(line)
-      JavaWordTokenizer(content).filter(x => x(0).isLetter && ! broadcastStopWord.value.contains(x))
+      JavaWordTokenizer(content)
+        .filter(x => x(0).isLetter && ! broadcastStopWord.value.contains(x))
     }.distinct.collect.map(x => wordMap.index(x))
-
 
     val broadcastWordMap = sc.broadcast(wordMap)
     val broadcastDocMap = sc.broadcast(docMap)
@@ -187,8 +187,6 @@ object MLUtils {
       }
       Document(fileIdx, content.toArray)
     }
-
-    // I must send a job to do data clean
     (data, wordMap, docMap)
   }
 }
