@@ -182,13 +182,14 @@ object GradientDescent extends Logging {
     val timeArray = new ArrayBuffer[Long](numOuterIterations)
     for (i <- 1 to numOuterIterations) {
       val weightsAndLosses = data.mapPartitions { currentPartitionIterator =>
-        val currentPartitionData = currentPartitionIterator.toArray
+        var iterReserved = currentPartitionIterator
 
         val localLossHistory = new ArrayBuffer[Double](numInnerIterations)
 
         for (j <- 1 to numInnerIterations) {
+          val (iter1, iter2) = iterReserved.duplicate
           val rand = new Random(42 + i * numOuterIterations + j)
-          val (gradientSum, lossSum) = currentPartitionData
+          val (gradientSum, lossSum) = iter1
             .filter(x => rand.nextDouble() <= miniBatchFraction)
             .map { case (y, features) =>
             val featuresCol = new DoubleMatrix(features.length, 1, features: _*)
@@ -200,6 +201,8 @@ object GradientDescent extends Logging {
           val update = updater.compute(weights, gradientSum.div(miniBatchSize), stepSize, (i - 1) * numOuterIterations + j, regParam)
           weights = update._1
           regVal = update._2
+
+          iterReserved = iter2
         }
 
         Seq((weights, localLossHistory.toArray)).iterator
