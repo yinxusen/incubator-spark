@@ -1,10 +1,11 @@
 package org.apache.spark.mllib.clustering
 
-import org.apache.spark.{SparkContext, Logging}
-import org.apache.spark.mllib.util.MLUtils
-import org.apache.spark.rdd.RDD
 import org.jblas.DoubleMatrix
+
+import org.apache.spark.mllib.util.MLUtils
 import org.apache.spark.mllib.expectation.GibbsSampling
+import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkContext, Logging}
 
 case class LDAModel (
     val docCounts: DoubleMatrix,
@@ -33,15 +34,6 @@ class LDA private (
       docTopicSmoothing,
       topicTermSmoothing)
   }
-
-  def solvePhiAndTheta(finalModel: LDAModel): (DoubleMatrix, DoubleMatrix) = {
-    finalModel.docCounts.addi(docTopicSmoothing * numTopics)
-    finalModel.topicCounts.addi(topicTermSmoothing * numTerms)
-    finalModel.docTopicCounts.addi(docTopicSmoothing)
-    finalModel.topicTermCounts.addi(topicTermSmoothing)
-    (finalModel.topicTermCounts.divRowVector(finalModel.topicCounts),
-      finalModel.docTopicCounts.divRowVector(finalModel.docCounts))
-  }
 }
 
 object LDA {
@@ -53,15 +45,16 @@ object LDA {
       topicTermSmoothing: Double,
       numIterations: Int,
       numDocs: Int,
-      numTerms: Int): LDAModel = {
+      numTerms: Int): (DoubleMatrix, DoubleMatrix) = {
     val lda = new LDA(numTopics,
       docTopicSmoothing,
       topicTermSmoothing,
       numIterations,
       numDocs,
       numTerms)
-    lda.run(data)
-    // lda.solvePhiAndTheta(finalModel)
+    val model = lda.run(data)
+    GibbsSampling.
+      solvePhiAndTheta(model, numTopics, numTerms, docTopicSmoothing, topicTermSmoothing)
   }
 
   def main(args: Array[String]) {
@@ -76,11 +69,9 @@ object LDA {
     val (data, wordMap, docMap) = MLUtils.loadCorpus(sc, inputDir, minSplit)
     val numDocs = docMap.size
     val numTerms = wordMap.size
-    val model = LDA.train(data, k, 0.01, 0.01, iters, numDocs, numTerms)
-    println(s"final model doc count is ${model.docCounts}")
-    println(s"final model topic count is ${model.topicCounts}")
-    println(s"final model doc-topic count is ${model.docTopicCounts}")
-    println(s"final model topic-term count is ${model.topicTermCounts}")
+    val (phi, theta) = LDA.train(data, k, 0.01, 0.01, iters, numDocs, numTerms)
+    println(s"final model Phi is ${phi}")
+    println(s"final model Theta is ${theta}")
 
   }
 }

@@ -166,5 +166,20 @@ object GibbsSampling extends Logging {
         params.map(x => x.topicTermCounts).reduce(_ addi _))
     }.drop(1).take(numOuterIterations).last
   }
+
+
+  def solvePhiAndTheta(
+      model: LDAModel,
+      numTopics: Int,
+      numTerms: Int,
+      docTopicSmoothing: Double,
+      topicTermSmoothing: Double): (DoubleMatrix, DoubleMatrix) = {
+    val docCnt = model.docCounts.add(docTopicSmoothing * numTopics)
+    val topicCnt = model.topicCounts.add(topicTermSmoothing * numTerms)
+    val docTopicCnt = model.docTopicCounts.add(docTopicSmoothing)
+    val topicTermCnt = model.topicTermCounts.add(topicTermSmoothing)
+    (topicTermCnt.divColumnVector(topicCnt),
+      docTopicCnt.divColumnVector(docCnt))
+  }
 }
 
