@@ -156,7 +156,7 @@ object MLUtils {
     val wordMap = Index[String]()
     val docMap = Index[String]()
 
-    val almostData = sc.textFile(dir, miniSplit)
+    val almostData = sc.textFile(dir, miniSplit).cache()
 
     val stopWords = sc.textFile(dirStopWords, miniSplit).
       map(x => x.replaceAll("""(?m)\s+$""", "")).distinct.collect.toSet

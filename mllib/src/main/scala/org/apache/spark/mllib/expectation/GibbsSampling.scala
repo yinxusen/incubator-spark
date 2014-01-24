@@ -158,9 +158,9 @@ object GibbsSampling extends Logging {
     topicAssign = topicAssignAndParams.flatMap(x => x._1)
     topicAssign.cache()
 
-    println(s"free memory before collect in initialization is ${Runtime.getRuntime.freeMemory}")
+    println(s"free memory before collect in initialization is ${Runtime.getRuntime.freeMemory / (1024*1024*1024.0)}")
     val params = topicAssignAndParams.map(x => x._2).collect()
-    println(s"free memory after collect in initialization is ${Runtime.getRuntime.freeMemory}")
+    println(s"free memory after collect in initialization is ${Runtime.getRuntime.freeMemory / (1024*1024*1024.0)}")
 
     val initialModel = LDAModel(
       params.map(x => x.docCounts).reduce(_ addi _),
@@ -214,9 +214,9 @@ object GibbsSampling extends Logging {
       topicAssign = topicAssignAndParams.flatMap(x => x._1)
       topicAssign.cache()
 
-      println(s"free memory before collect in iteration $randSeedSalt is ${Runtime.getRuntime.freeMemory}")
+      println(s"free memory before collect in iteration $randSeedSalt is ${Runtime.getRuntime.freeMemory / (1024*1024*1024.0)}")
       val params = topicAssignAndParams.map(x => x._2).collect()
-      println(s"free memory after collect in iteration $randSeedSalt is ${Runtime.getRuntime.freeMemory}")
+      println(s"free memory after collect in iteration $randSeedSalt is ${Runtime.getRuntime.freeMemory / (1024*1024*1024.0)}")
 
       current.copy(
         params.map(x => x.docCounts).reduce(_ addi _),
