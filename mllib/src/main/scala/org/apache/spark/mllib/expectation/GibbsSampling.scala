@@ -212,6 +212,8 @@ object GibbsSampling extends Logging {
       topicAssign = topicAssignAndParams.flatMap(x => x._1)
       topicAssign.cache()
 
+      println(s"This iteration is $randSeedSalt")
+
       val params = topicAssignAndParams.map(x => x._2).collect()
 
       current.copy(
