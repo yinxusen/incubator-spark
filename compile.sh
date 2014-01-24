@@ -10,6 +10,6 @@ package
 assembly
 note
 
-sbt clean assemble-deps
+#sbt clean assemble-deps
 
-sbt examples/assembly package
+sbt package

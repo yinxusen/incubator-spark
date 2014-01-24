@@ -19,15 +19,15 @@
 # - SPARK_WORKER_PORT / SPARK_WORKER_WEBUI_PORT
 # - SPARK_WORKER_INSTANCES, to set the number of worker processes per node
 
-export SPARK_MASTER_IP=172.16.126.183
+#export SPARK_MASTER_IP=172.16.126.183
 export SPARK_WORKER_MEMORY=10g
 export SPARK_MEM=8g
-export SPARK_MASTER=yama@172.16.126.183:/home/yama/bdas/spark-bsp
+#export SPARK_MASTER=yama@172.16.126.183:/home/yama/bdas/spark-bsp
 
-export SPARK_JAVA_OPTS+=" -Dspark.gradientDescent.innerIteration=20"
+#export SPARK_JAVA_OPTS+=" -Dspark.gradientDescent.innerIteration=20"
 
 # This is for trigram web spam dataset
-export SPARK_JAVA_OPTS+=" -Dspark.default.dimension=16609144"
+#export SPARK_JAVA_OPTS+=" -Dspark.default.dimension=16609144"
 
 # This is for unigram web spam dataset
 # export SPARK_JAVA_OPTS+=" -Dspark.default.dimension=255"
