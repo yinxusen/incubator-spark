@@ -174,6 +174,9 @@ object MLUtils {
         .filter(x => x(0).isLetter && ! broadcastStopWord.value.contains(x))
     }.distinct.collect.map(x => wordMap.index(x))
 
+    println(wordMap.size)
+    println(docMap.size)
+
     val broadcastWordMap = sc.broadcast(wordMap)
     val broadcastDocMap = sc.broadcast(docMap)
 
