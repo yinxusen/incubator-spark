@@ -7,12 +7,43 @@ import org.apache.spark.mllib.expectation.GibbsSampling
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkContext, Logging}
 
-case class LDAModel (
+case class LDAParams (
     docCounts: DoubleMatrix,
     topicCounts: DoubleMatrix,
     docTopicCounts: DoubleMatrix,
     topicTermCounts: DoubleMatrix)
-  extends Serializable
+  extends Serializable {
+
+  def inc(docId: Int, word: Int, topic: Int) {
+    docCounts.put(docId, 0, docCounts.get(docId, 0) + 1)
+    topicCounts.put(topic, 0, topicCounts.get(topic, 0) + 1)
+    docTopicCounts.put(docId, topic, docTopicCounts.get(docId, topic) + 1)
+    topicTermCounts.put(topic, word, topicTermCounts.get(topic, word) + 1)
+  }
+
+  def dec(docId: Int, word: Int, topic: Int) {
+    docCounts.put(docId, 0, docCounts.get(docId, 0) - 1)
+    topicCounts.put(topic, 0, topicCounts.get(topic, 0) - 1)
+    docTopicCounts.put(docId, topic, docTopicCounts.get(docId, topic) - 1)
+    topicTermCounts.put(topic, word, topicTermCounts.get(topic, word) - 1)
+  }
+
+  def addi(other: LDAParams) = {
+    docCounts.addi(other.docCounts)
+    topicCounts.addi(other.topicCounts)
+    docTopicCounts.addi(other.docTopicCounts)
+    topicTermCounts.addi(other.topicTermCounts)
+    this
+  }
+}
+
+object LDAParams {
+  def apply(numDocs: Int, numTopics: Int, numTerms: Int) = new LDAParams(
+    DoubleMatrix.zeros(numDocs),
+    DoubleMatrix.zeros(numTopics),
+    DoubleMatrix.zeros(numDocs, numTopics),
+    DoubleMatrix.zeros(numTopics, numTerms))
+}
 
 class LDA private (
     var numTopics: Int,
@@ -23,7 +54,7 @@ class LDA private (
     var numTerms: Int)
   extends Serializable with Logging
 {
-  def run(input: RDD[Document]): LDAModel = {
+  def run(input: RDD[Document]): LDAParams = {
     GibbsSampling.runGibbsSampling(
       input,
       numIteration,
