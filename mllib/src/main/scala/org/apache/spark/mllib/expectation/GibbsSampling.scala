@@ -13,13 +13,12 @@ class GibbsSampling
 object GibbsSampling extends Logging {
 
   /**
-   * This is a uniform distribution sampler, which is only used for the initialization.
+   * A uniform distribution sampler, which is only used for initialization.
    */
   private def uniformDistSampler(rand: Random, dimension: Int): Int = rand.nextInt(dimension)
 
   /**
-   * This is a multinomial distribution sampler.
-   * I use a roulette method to sample an Int back.
+   * A multinomial distribution sampler, using roulette method to sample an Int back.
    */
   private def multinomialDistSampler(rand: Random, dist: DoubleMatrix): Int = {
     val roulette = rand.nextDouble()
@@ -39,21 +38,23 @@ object GibbsSampling extends Logging {
    * In the end, I call multinomialDistSampler to sample a figure out.
    */
   private def dropOneDistSampler(
-      model: LDAParams,
+      params: LDAParams,
       docTopicSmoothing: Double,
       topicTermSmoothing: Double,
       numTopics: Int,
       numTerms: Int,
       termIdx: Int,
       docIdx: Int,
-      rand: Random): Int = {
+      rand: Random)
+    : Int =
+  {
     val topicThisTerm = new DoubleMatrix(numTopics, 1)
     val topicThisDoc = new DoubleMatrix(numTopics, 1)
-    model.topicTermCounts.getColumn(termIdx, topicThisTerm)
-    model.docTopicCounts.getRow(docIdx, topicThisDoc)
+    val fraction = params.topicCounts.add(numTerms * topicTermSmoothing)
+    params.topicTermCounts.getColumn(termIdx, topicThisTerm)
+    params.docTopicCounts.getRow(docIdx, topicThisDoc)
     topicThisTerm.addi(topicTermSmoothing)
     topicThisDoc.addi(docTopicSmoothing)
-    val fraction = model.topicCounts.add(numTerms * topicTermSmoothing)
     topicThisTerm.divi(fraction)
     topicThisTerm.muli(topicThisDoc)
     topicThisTerm.divi(topicThisTerm.sum)
@@ -73,15 +74,16 @@ object GibbsSampling extends Logging {
       numDocs: Int,
       numTopics: Int,
       docTopicSmoothing: Double,
-      topicTermSmoothing: Double): LDAParams = {
-
+      topicTermSmoothing: Double)
+    : LDAParams =
+  {
     // construct topic assignment RDD
-    logInfo("role in initialization mode")
+    logInfo("Start initialization")
 
-    val assignedTopicsAndParams = data.mapPartitionsWithIndex { case (index, iterator) =>
-      val params = LDAParams(numDocs, numTopics, numTerms)
+    val init = data.mapPartitionsWithIndex { case (index, iterator) =>
       val rand = new Random(42 + index)
-      val assignedTopics = iterator.flatMap { case Document(docId, content) =>
+      val params = LDAParams(numDocs, numTopics, numTerms)
+      val assignedTopics = iterator.map { case Document(docId, content) =>
         content.map { term =>
           val topic = uniformDistSampler(rand, numTopics)
           params.inc(docId, term, topic)
@@ -92,56 +94,61 @@ object GibbsSampling extends Logging {
       Seq((assignedTopics, params)).iterator
     }
 
-    val initialAssignedTopics = assignedTopicsAndParams.map(_._1).cache()
-    val params = assignedTopicsAndParams.map(_._2)
-    val initialParams = params.reduce(_ addi _)
+    val initialAssignedTopics = init.flatMap(_._1).cache()
+    val initialParams = init.map(_._2).reduce(_ addi _)
 
     // Gibbs sampling
-    Iterator.iterate((initialParams, initialAssignedTopics, 0)) { case (lastParams, lastAssignedTopics, salt) =>
-      logInfo("Start Gibbs sampling")
+    val (param, _, _) = Iterator.iterate((initialParams, initialAssignedTopics, 0)) {
+      case (lastParams, lastAssignedTopics, salt) =>
+        logInfo("Start Gibbs sampling")
 
-      val assignedTopicsAndParams = data.zip(lastAssignedTopics).mapPartitions { iter =>
-        val params = LDAParams(numDocs, numTopics, numTerms)
-        val rand = new Random(42 + salt * numOuterIterations)
-        val assignedTopics = iter.map { case (Document(docId, content), topics) =>
-          content.zip(topics).map { case (term, topic) =>
-            lastParams.dec(docId, term, topic)
-            val assignedTopic = dropOneDistSampler(lastParams, docTopicSmoothing,
-              topicTermSmoothing, numTopics, numTerms, term, docId, rand)
+        val assignedTopicsAndParams = data.zip(lastAssignedTopics).mapPartitions { iterator =>
+          val params = LDAParams(numDocs, numTopics, numTerms)
+          val rand = new Random(42 + salt * numOuterIterations)
+          val assignedTopics = iterator.map { case (Document(docId, content), topics) =>
+            content.zip(topics).map { case (term, topic) =>
+              lastParams.dec(docId, term, topic)
 
-            lastParams.inc(docId, term, assignedTopic)
-            params.inc(docId, term, assignedTopic)
-            assignedTopic
-          }
-        }.toArray
+              val assignedTopic = dropOneDistSampler(
+                lastParams, docTopicSmoothing,
+                topicTermSmoothing, numTopics, numTerms, term, docId, rand)
 
-        Seq((assignedTopics, params)).iterator
-      }
+              lastParams.inc(docId, term, assignedTopic)
+              params.inc(docId, term, assignedTopic)
+              assignedTopic
+            }
+          }.toArray
 
-      val assignedTopics = assignedTopicsAndParams.flatMap(_._1).cache()
-      val params = assignedTopicsAndParams.map(_._2).reduce(_ addi _)
-      lastAssignedTopics.unpersist()
+          Seq((assignedTopics, params)).iterator
+        }
 
-      (params, assignedTopics, salt + 1)
-    }.drop(1 + numOuterIterations).next()._1
+        val assignedTopics = assignedTopicsAndParams.flatMap(_._1).cache()
+        val paramsRdd = assignedTopicsAndParams.map(_._2)
+        val params = paramsRdd.zip(assignedTopics).map(_._1).reduce(_ addi _)
+        lastAssignedTopics.unpersist()
+
+        (params, assignedTopics, salt + 1)
+    }.drop(1 + numOuterIterations).next()
+
+    param
   }
 
   /**
-   * We use LDAModel to infer parameters Phi and Theta.
-   * Just a two simple equations.
+   * We use LDAParams to infer parameters Phi and Theta.
    */
   def solvePhiAndTheta(
-      model: LDAParams,
+      params: LDAParams,
       numTopics: Int,
       numTerms: Int,
       docTopicSmoothing: Double,
-      topicTermSmoothing: Double): (DoubleMatrix, DoubleMatrix) = {
-    val docCnt = model.docCounts.add(docTopicSmoothing * numTopics)
-    val topicCnt = model.topicCounts.add(topicTermSmoothing * numTerms)
-    val docTopicCnt = model.docTopicCounts.add(docTopicSmoothing)
-    val topicTermCnt = model.topicTermCounts.add(topicTermSmoothing)
-    (topicTermCnt.divColumnVector(topicCnt),
-      docTopicCnt.divColumnVector(docCnt))
+      topicTermSmoothing: Double)
+    : (DoubleMatrix, DoubleMatrix) =
+  {
+    val docCount = params.docCounts.add(docTopicSmoothing * numTopics)
+    val topicCount = params.topicCounts.add(topicTermSmoothing * numTerms)
+    val docTopicCount = params.docTopicCounts.add(docTopicSmoothing)
+    val topicTermCount = params.topicTermCounts.add(topicTermSmoothing)
+    (topicTermCount.divColumnVector(topicCount), docTopicCount.divColumnVector(docCount))
   }
 
   /**
@@ -151,12 +158,12 @@ object GibbsSampling extends Logging {
    * Small perplexity means good result.
    */
   def perplexity(data: RDD[Document], phi: DoubleMatrix, theta: DoubleMatrix): Double = {
-    val (pTerm, totalNum) = data.map { doc =>
-      val currentTheta = theta.getRow(doc.docId).mmul(phi)
-      doc.content.map(x => (math.log(currentTheta.get(x)), 1))
-        .reduce((a, b) => (a._1 + b._1, a._2 + b._2))
-    }.reduce((a, b) => (a._1 + b._1, a._2 + b._2))
-    math.exp(-1 * pTerm / totalNum)
+    val (termProb, totalNum) = data.flatMap { case Document(docId, content) =>
+      val currentTheta = theta.getRow(docId).mmul(phi)
+      content.map(x => (math.log(currentTheta.get(x)), 1))
+    }.reduce { (left, right) =>
+      (left._1 + right._1, left._2 + right._2)
+    }
+    math.exp(-1 * termProb / totalNum)
   }
 }
-
