@@ -80,6 +80,9 @@ object GibbsSampling extends Logging {
     // construct topic assignment RDD
     logInfo("Start initialization")
 
+    val checkPointInterval = System
+      .getProperty("spark.gibbsSampling.checkPointInterval", "10").toInt
+
     val init = data.mapPartitionsWithIndex { case (index, iterator) =>
       val rand = new Random(42 + index)
       val params = LDAParams(numDocs, numTopics, numTerms)
@@ -123,6 +126,9 @@ object GibbsSampling extends Logging {
         }
 
         val assignedTopics = assignedTopicsAndParams.flatMap(_._1).cache()
+        if (salt % checkPointInterval == 0) {
+          assignedTopics.checkpoint()
+        }
         val paramsRdd = assignedTopicsAndParams.map(_._2)
         val params = paramsRdd.zip(assignedTopics).map(_._1).reduce(_ addi _)
         lastAssignedTopics.unpersist()

@@ -96,7 +96,9 @@ object LDA {
 
     val (master, inputDir, k, iters, minSplit) =
       (args(0), args(1), args(2).toInt, args(3).toInt, args(4).toInt)
+    val checkPointDir = System.getProperty("spark.gibbsSampling.checkPointDir", "/tmp/lda")
     val sc = new SparkContext(master, "LDA")
+    sc.setCheckpointDir(checkPointDir)
     val (data, wordMap, docMap) = MLUtils.loadCorpus(sc, inputDir, minSplit)
     val numDocs = docMap.size
     val numTerms = wordMap.size
