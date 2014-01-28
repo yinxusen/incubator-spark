@@ -95,6 +95,10 @@ class LassoWithSGDAlt private (
     xColMean = stats._2
     xColSd = stats._3
 
+    println(s"Y mean is $yMean")
+    println(s"X mean is $xColMean")
+    println(s"X sd is $xColSd")
+
     val normalizedData = input.map { point =>
       val yNormalized = point.label - yMean
       val featuresMat = new DoubleMatrix(nfeatures, 1, point.features:_*)

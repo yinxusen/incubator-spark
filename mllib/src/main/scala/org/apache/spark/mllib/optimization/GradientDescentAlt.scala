@@ -158,9 +158,8 @@ object GradientDescentAlt extends Logging {
        * NOTE(Xinghao): lossSum is computed using the weights from the previous iteration
        * and regVal is the regularization value computed in the previous iteration as well.
        */
-      assert(miniBatchSize + regVal > 0.0)
-      stochasticLossHistory.append(lossSum / miniBatchSize + regVal)
       assert(miniBatchSize > 0.0)
+      stochasticLossHistory.append(lossSum / miniBatchSize + regVal)
       val update = updater.compute(
         weights, gradientSum.div(miniBatchSize), stepSize, i, regParam)
       weights = update._1
