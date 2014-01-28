@@ -70,6 +70,7 @@ class SimpleUpdater extends Updater {
 class L1Updater extends Updater {
   override def compute(weightsOld: DoubleMatrix, gradient: DoubleMatrix,
       stepSize: Double, iter: Int, regParam: Double): (DoubleMatrix, Double) = {
+    assert(math.sqrt(iter) > 0.0)
     val thisIterStepSize = stepSize / math.sqrt(iter)
     val normGradient = gradient.mul(thisIterStepSize)
     // Take gradient step
