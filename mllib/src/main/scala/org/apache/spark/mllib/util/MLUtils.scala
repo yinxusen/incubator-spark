@@ -23,9 +23,7 @@ import org.apache.spark.SparkContext._
 
 import org.jblas.DoubleMatrix
 
-import breeze.linalg._
-import breeze.util.Index
-import chalk.text.tokenize.JavaWordTokenizer
+import org.apache.spark.mllib.util.SmartCnTokenizer
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.clustering.Document
 import scala.collection.mutable.ArrayBuffer
@@ -146,15 +144,30 @@ object MLUtils {
     nameAndContent.splitAt(pos)
   }
 
+  class Index {
+    import scala.collection.mutuable._
+    private var lastNumber = 0
+    private val container = HashMap.empty[String, Int]
+    def apply(s: String): Int = {
+      container.get(s) match {
+        case Some(v) => v
+        case None => 
+          container += (s -> lastNumber)
+          lastNumber += 1
+          lastNumber - 1
+    }
+    def size(): Int = lastNumber
+  }
+
   def loadCorpus(
       sc: SparkContext,
       dir: String,
       miniSplit: Int,
       dirStopWords: String = "./english.stop.txt"):
-    (RDD[Document], Index[String], Index[String]) = {
+    (RDD[Document], Index, Index) = {
 
-    val wordMap = Index[String]()
-    val docMap = Index[String]()
+    val wordMap = new Index
+    val docMap = new Index
 
     val almostData = sc.textFile(dir, miniSplit).cache()
 
@@ -166,13 +179,13 @@ object MLUtils {
     almostData.map { line =>
       val (fileName, _) = splitNameAndContent(line)
       fileName
-    }.distinct.collect.map(x => docMap.index(x))
+    }.distinct.collect.map(x => docMap(x))
 
     almostData.flatMap { line =>
       val (_, content) = splitNameAndContent(line)
       JavaWordTokenizer(content)
-        .filter(x => x(0).isLetter && ! broadcastStopWord.value.contains(x))
-    }.distinct.collect.map(x => wordMap.index(x))
+        .filter(x => x(0).isLetter && ! broadcastS/home/sentopWord.value.contains(x))
+    }.distinct.collect.map(x => wordMap(x))
 
     println(wordMap.size)
     println(docMap.size)
@@ -182,11 +195,11 @@ object MLUtils {
 
     val data = almostData.map { line =>
       val splitVersion = splitNameAndContent(line)
-      val fileIdx = broadcastDocMap.value.index(splitVersion._1)
+      val fileIdx = broadcastDocMap.value(splitVersion._1)
       val content = new ArrayBuffer[Int]
-      for (token <- JavaWordTokenizer(splitVersion._2)
+      for (token <- SmartCnTokenizer(splitVersion._2)
         if (token(0).isLetter && ! broadcastStopWord.value.contains(token))) {
-        content.append(broadcastWordMap.value.index(token))
+        content.append(broadcastWordMap.value(token))
       }
       Document(fileIdx, content.toArray)
     }
