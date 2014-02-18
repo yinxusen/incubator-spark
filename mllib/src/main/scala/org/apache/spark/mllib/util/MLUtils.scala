@@ -23,7 +23,6 @@ import org.apache.spark.SparkContext._
 
 import org.jblas.DoubleMatrix
 
-import org.apache.spark.mllib.util.SmartCnTokenizer
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.clustering.Document
 import scala.collection.mutable.ArrayBuffer
@@ -145,7 +144,7 @@ object MLUtils {
   }
 
   class Index {
-    import scala.collection.mutuable._
+    import scala.collection.mutable.HashMap
     private var lastNumber = 0
     private val container = HashMap.empty[String, Int]
     def apply(s: String): Int = {
@@ -155,6 +154,7 @@ object MLUtils {
           container += (s -> lastNumber)
           lastNumber += 1
           lastNumber - 1
+      }
     }
     def size(): Int = lastNumber
   }
@@ -183,8 +183,8 @@ object MLUtils {
 
     almostData.flatMap { line =>
       val (_, content) = splitNameAndContent(line)
-      JavaWordTokenizer(content)
-        .filter(x => x(0).isLetter && ! broadcastS/home/sentopWord.value.contains(x))
+      SCTokenizer(content)
+        .filter(x => x(0).isLetter && ! broadcastStopWord.value.contains(x))
     }.distinct.collect.map(x => wordMap(x))
 
     println(wordMap.size)
@@ -197,7 +197,7 @@ object MLUtils {
       val splitVersion = splitNameAndContent(line)
       val fileIdx = broadcastDocMap.value(splitVersion._1)
       val content = new ArrayBuffer[Int]
-      for (token <- SmartCnTokenizer(splitVersion._2)
+      for (token <- SCTokenizer(splitVersion._2)
         if (token(0).isLetter && ! broadcastStopWord.value.contains(token))) {
         content.append(broadcastWordMap.value(token))
       }

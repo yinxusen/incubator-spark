@@ -7,12 +7,11 @@ package org.apache.spark.mllib.util
  * Time: 11:55 AM
  * To change this template use File | Settings | File Templates.
  */
-import org.apache.spark.mllib.util.SmartCnTokenizer
 import scala.collection.JavaConversions._
 
-class SmartCnTokenizer {
+class SCTokenizer {
   def apply(s: String): Iterable[String] = SmartCnTokenizer.parseString(s)
 }
 
-object SmartCnTokenizer extends SmartCnTokenizer
+object SCTokenizer extends SCTokenizer
 

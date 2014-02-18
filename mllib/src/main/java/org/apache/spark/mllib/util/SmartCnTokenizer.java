@@ -9,7 +9,6 @@ package org.apache.spark.mllib.util;
  */
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.List;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -38,7 +37,7 @@ public class SmartCnTokenizer {
     }
 
     public static ArrayList<String> parseString(String s) throws IOException {
-        return tokenizer.parseString(new SmartChineseAnalyzer(Version.LUCENE_45), s);
+        return SmartCnTokenizer.parseString(new SmartChineseAnalyzer(Version.LUCENE_45), s);
     }
 }
 

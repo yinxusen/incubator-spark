@@ -244,13 +244,11 @@ object SparkBuild extends Build {
   def coreSettings = sharedSettings ++ Seq(
     name := "spark-core",
     resolvers ++= Seq(
-       "Sonatype Releases"    at "https://oss.sonatype.org/content/repositories/releases/",
        "JBoss Repository"     at "http://repository.jboss.org/nexus/content/repositories/releases/",
        "Cloudera Repository"  at "https://repository.cloudera.com/artifactory/cloudera-repos/"
     ),
 
     libraryDependencies ++= Seq(
-        "org.apache.lucene" % "lucene-analyzers-smartcn" % "4.5.1",
         "com.google.guava"         % "guava"            % "14.0.1",
         "com.google.code.findbugs" % "jsr305"           % "1.3.9",
         "log4j"                    % "log4j"            % "1.2.17",
@@ -332,6 +330,7 @@ object SparkBuild extends Build {
   def mllibSettings = sharedSettings ++ Seq(
     name := "spark-mllib",
     libraryDependencies ++= Seq(
+      "org.apache.lucene" % "lucene-analyzers-smartcn" % "4.5.1",
       "org.jblas" % "jblas" % "1.2.3"
     )
   )
