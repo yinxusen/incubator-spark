@@ -1,6 +1,8 @@
 package org.apache.spark.rdd.util;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -16,20 +18,16 @@ public class SmallFilesRecordReader implements RecordReader<FileLineWritable, Te
     private long startOffset;
     private long end;
     private long pos;
-    private FileSystem fs;
     private Path path;
 
-    private FSDataInputStream fileIn;
     private LineReader reader;
 
     public SmallFilesRecordReader (CombineFileSplit split, Configuration conf, Reporter reporter, Integer index)
             throws IOException{
         this.path = split.getPath(index);
-        fs = this.path.getFileSystem(conf);
         this.startOffset = split.getOffset(index);
         this.end = startOffset + split.getLength(index);
-        fileIn = fs.open(path);
-        reader = new LineReader(fileIn);
+        reader = new LineReader(this.path.getFileSystem(conf).open(path));
         this.pos = startOffset;
     }
 
@@ -53,7 +51,6 @@ public class SmallFilesRecordReader implements RecordReader<FileLineWritable, Te
 
     public FileLineWritable createKey() {
         FileLineWritable retKey = new FileLineWritable();
-        retKey.fileName = path.getName();
         return retKey;
     }
 
@@ -64,12 +61,19 @@ public class SmallFilesRecordReader implements RecordReader<FileLineWritable, Te
 
     @Override
     public boolean next(FileLineWritable key, Text value) throws IOException {
+        key.fileName = path.getName();
         key.offset = pos;
+        value.clear();
+        StringBuffer totalContent = new StringBuffer();
         int newSize = 0;
-        if (pos < end) {
-            newSize = reader.readLine(value);
+        Text buffer = new Text();
+        while (pos < end) {
+            newSize = reader.readLine(buffer);
+            totalContent.append(buffer.toString());
+            totalContent.append(' ');
             pos += newSize;
         }
+        value.set(totalContent.toString());
         if (newSize == 0) {
             return false;
         } else{

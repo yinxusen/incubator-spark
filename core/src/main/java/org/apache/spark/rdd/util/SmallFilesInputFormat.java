@@ -7,6 +7,8 @@ import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.CombineFileInputFormat;
 import org.apache.hadoop.mapred.lib.CombineFileRecordReader;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 
 public class SmallFilesInputFormat extends
         CombineFileInputFormat<FileLineWritable, Text> {
@@ -22,6 +24,11 @@ public class SmallFilesInputFormat extends
                 (CombineFileSplit) split,
                 reporter,
                 (Class) SmallFilesRecordReader.class);
+    }
+
+    @Override
+    protected boolean isSplitable(FileSystem fs, Path filename) {
+        return false;
     }
 
 }

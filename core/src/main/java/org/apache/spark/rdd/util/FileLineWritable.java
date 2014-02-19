@@ -60,4 +60,8 @@ public class FileLineWritable
       return true;
     }
 
+    public String toString() {
+        return fileName;
+    }
+
 }
