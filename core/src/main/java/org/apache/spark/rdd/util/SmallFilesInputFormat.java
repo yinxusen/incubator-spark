@@ -2,36 +2,26 @@ package org.apache.spark.rdd.util;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.input.CombineFileInputFormat;
-import org.apache.hadoop.mapreduce.lib.input.CombineFileRecordReader;
-import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
+import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapred.lib.CombineFileInputFormat;
+import org.apache.hadoop.mapred.lib.CombineFileRecordReader;
+import org.apache.hadoop.mapred.lib.CombineFileSplit;
 
 public class SmallFilesInputFormat extends
         CombineFileInputFormat<FileLineWritable, Text> {
 
-    public SmallFilesInputFormat() {
-        super();
-        setMaxSplitSize(67108864); // 64 MB, default block size on hadoop
-    }
-
-    public RecordReader<FileLineWritable, Text> createRecordReader(
-            InputSplit split,
-            TaskAttemptContext context) throws IOException {
-        return new CombineFileRecordReader<FileLineWritable, Text>(
-                (CombineFileSplit) split,
-                context,
-                SmallFilesRecordReader.class);
-    }
-
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
-    protected boolean isSplitable(JobContext context, Path file) {
-        return false;
+    public RecordReader<FileLineWritable, Text> getRecordReader(
+            InputSplit split,
+            JobConf conf,
+            Reporter reporter) throws IOException {
+        return new CombineFileRecordReader(
+                conf,
+                (CombineFileSplit) split,
+                reporter,
+                (Class) SmallFilesRecordReader.class);
     }
 
 }

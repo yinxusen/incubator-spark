@@ -5,45 +5,45 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.input.CombineFileSplit;
+import org.apache.hadoop.mapred.RecordReader;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.util.LineReader;
 
-public class SmallFilesRecordReader extends RecordReader<FileLineWritable, Text> {
+import org.apache.hadoop.conf.Configuration;
+
+public class SmallFilesRecordReader implements RecordReader<FileLineWritable, Text> {
     private long startOffset;
     private long end;
     private long pos;
     private FileSystem fs;
     private Path path;
-    private FileLineWritable key;
-    private Text value;
 
     private FSDataInputStream fileIn;
     private LineReader reader;
 
-    public SmallFilesRecordReader(
-            CombineFileSplit split,
-            TaskAttemptContext context,
-            Integer index) throws IOException {
+    public SmallFilesRecordReader (CombineFileSplit split, Configuration conf, Reporter reporter, Integer index)
+            throws IOException{
         this.path = split.getPath(index);
-        fs = this.path.getFileSystem(context.getConfiguration());
+        fs = this.path.getFileSystem(conf);
         this.startOffset = split.getOffset(index);
         this.end = startOffset + split.getLength(index);
-
         fileIn = fs.open(path);
         reader = new LineReader(fileIn);
         this.pos = startOffset;
     }
 
     @Override
-    public void initialize (InputSplit arg0, TaskAttemptContext arg1) {
-        // intent to be empty
+    public void close() throws IOException {
+        if (reader != null) {
+            reader.close();
+        }
     }
 
     @Override
-    public void close() throws IOException {}
+    public long getPos() throws IOException {
+        return pos;
+    }
 
     @Override
     public float getProgress() throws IOException {
@@ -51,34 +51,26 @@ public class SmallFilesRecordReader extends RecordReader<FileLineWritable, Text>
         return Math.min(1.0f, (pos - startOffset) / (float) (end - startOffset));
     }
 
-    @Override
-    public FileLineWritable getCurrentKey() throws IOException, InterruptedException {
-        return key;
+    public FileLineWritable createKey() {
+        FileLineWritable retKey = new FileLineWritable();
+        retKey.fileName = path.getName();
+        return retKey;
+    }
+
+    public Text createValue() {
+        Text retValue = new Text();
+        return retValue;
     }
 
     @Override
-    public Text getCurrentValue() throws IOException, InterruptedException {
-        return value;
-    }
-
-    @Override
-    public boolean nextKeyValue() throws IOException {
-        if (key == null) {
-            key = new FileLineWritable();
-            key.fileName = path.getName();
-        }
+    public boolean next(FileLineWritable key, Text value) throws IOException {
         key.offset = pos;
-        if (value == null){
-            value = new Text();
-        }
         int newSize = 0;
         if (pos < end) {
             newSize = reader.readLine(value);
             pos += newSize;
         }
         if (newSize == 0) {
-            key = null;
-            value = null;
             return false;
         } else{
             return true;
