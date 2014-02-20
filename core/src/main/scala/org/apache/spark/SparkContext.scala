@@ -353,6 +353,10 @@ class SparkContext(
     }
   }
 
+  def smallTextFilesDefraggler(files: RDD[(String, String)]): RDD[(String, String)] = {
+    files.groupBy(_._1)
+  }
+
   /**
    * Get an RDD for a Hadoop-readable dataset from a Hadoop JobConf given its InputFormat and other
    * necessary info (e.g. file name for a filesystem-based dataset, table name for HyperTable),

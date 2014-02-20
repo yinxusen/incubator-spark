@@ -32,6 +32,7 @@ public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable
     private long startOffset;
     private long end;
     private long pos;
+    private int totalLength;
     private Path path;
 
     private LineReader reader;
@@ -45,7 +46,9 @@ public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable
         path = split.getPath(index);
         startOffset = split.getOffset(index);
         pos = startOffset;
-        end = startOffset + split.getLength(index);
+        totalLength = (int) split.getLength(index);
+        end = startOffset + totalLength;
+
         FileSystem fs = path.getFileSystem(conf);
         FSDataInputStream fileIn = fs.open(path);
         fileIn.seek(startOffset);
@@ -88,14 +91,14 @@ public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable
         Text buffer = new Text();
         while (pos < end) {
             newSize = reader.readLine(buffer);
-            if (key.offset == pos) {
-                System.out.println("Here is" + buffer.toString());
-            }
             totalContent.append(buffer.toString());
             totalContent.append(' ');
             pos += newSize;
         }
-        value.set(totalContent.toString());
+
+        if (totalLength < totalContent.length()) {
+            value.set(totalContent.delete(totalLength, totalContent.length()).toString());
+        }
 
         return newSize != 0;
     }
