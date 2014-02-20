@@ -330,8 +330,9 @@ object SparkBuild extends Build {
   def mllibSettings = sharedSettings ++ Seq(
     name := "spark-mllib",
     libraryDependencies ++= Seq(
-      "org.apache.lucene" % "lucene-analyzers-smartcn" % "4.5.1",
-      "org.jblas" % "jblas" % "1.2.3"
+      "org.apache.hadoop"        % "hadoop-test"                % hadoopVersion,
+      "org.apache.lucene"        % "lucene-analyzers-smartcn"   % "4.5.1",
+      "org.jblas"                % "jblas"                      % "1.2.3"
     )
   )
 

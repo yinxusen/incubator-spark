@@ -18,13 +18,14 @@ package org.apache.spark.rdd.util;
  */
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.util.LineReader;
-
+import org.apache.hadoop.fs.FileSystem;
 import java.io.IOException;
 
 public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable, Text> {
@@ -41,11 +42,14 @@ public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable
             Reporter reporter,
             Integer index)
             throws IOException{
-        this.path = split.getPath(index);
-        this.startOffset = split.getOffset(index);
-        this.end = startOffset + split.getLength(index);
-        reader = new LineReader(this.path.getFileSystem(conf).open(path));
-        this.pos = startOffset;
+        path = split.getPath(index);
+        startOffset = split.getOffset(index);
+        pos = startOffset;
+        end = startOffset + split.getLength(index);
+        FileSystem fs = path.getFileSystem(conf);
+        FSDataInputStream fileIn = fs.open(path);
+        fileIn.seek(startOffset);
+        reader = new LineReader(fileIn);
     }
 
     @Override
@@ -84,6 +88,9 @@ public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable
         Text buffer = new Text();
         while (pos < end) {
             newSize = reader.readLine(buffer);
+            if (key.offset == pos) {
+                System.out.println("Here is" + buffer.toString());
+            }
             totalContent.append(buffer.toString());
             totalContent.append(' ');
             pos += newSize;
