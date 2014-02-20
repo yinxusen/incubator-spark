@@ -10,7 +10,7 @@ import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 
-public class SmallFilesInputFormat extends
+public class SmallTextFilesInputFormat extends
         CombineFileInputFormat<FileLineWritable, Text> {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -23,7 +23,7 @@ public class SmallFilesInputFormat extends
                 conf,
                 (CombineFileSplit) split,
                 reporter,
-                (Class) SmallFilesRecordReader.class);
+                (Class) SmallTextFilesRecordReader.class);
     }
 
     @Override

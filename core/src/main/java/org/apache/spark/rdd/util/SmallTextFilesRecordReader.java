@@ -1,10 +1,6 @@
 package org.apache.spark.rdd.util;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.RecordReader;
@@ -12,9 +8,9 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.util.LineReader;
 
-import org.apache.hadoop.conf.Configuration;
+import java.io.IOException;
 
-public class SmallFilesRecordReader implements RecordReader<FileLineWritable, Text> {
+public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable, Text> {
     private long startOffset;
     private long end;
     private long pos;
@@ -22,7 +18,7 @@ public class SmallFilesRecordReader implements RecordReader<FileLineWritable, Te
 
     private LineReader reader;
 
-    public SmallFilesRecordReader (CombineFileSplit split, Configuration conf, Reporter reporter, Integer index)
+    public SmallTextFilesRecordReader(CombineFileSplit split, Configuration conf, Reporter reporter, Integer index)
             throws IOException{
         this.path = split.getPath(index);
         this.startOffset = split.getOffset(index);
@@ -50,13 +46,11 @@ public class SmallFilesRecordReader implements RecordReader<FileLineWritable, Te
     }
 
     public FileLineWritable createKey() {
-        FileLineWritable retKey = new FileLineWritable();
-        return retKey;
+        return new FileLineWritable();
     }
 
     public Text createValue() {
-        Text retValue = new Text();
-        return retValue;
+        return new Text();
     }
 
     @Override
@@ -64,7 +58,7 @@ public class SmallFilesRecordReader implements RecordReader<FileLineWritable, Te
         key.fileName = path.getName();
         key.offset = pos;
         value.clear();
-        StringBuffer totalContent = new StringBuffer();
+        StringBuilder totalContent = new StringBuilder();
         int newSize = 0;
         Text buffer = new Text();
         while (pos < end) {
@@ -74,10 +68,7 @@ public class SmallFilesRecordReader implements RecordReader<FileLineWritable, Te
             pos += newSize;
         }
         value.set(totalContent.toString());
-        if (newSize == 0) {
-            return false;
-        } else{
-            return true;
-        }
+
+        return newSize != 0;
     }
 }

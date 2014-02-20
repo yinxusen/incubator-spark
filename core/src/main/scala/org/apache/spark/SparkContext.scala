@@ -347,7 +347,7 @@ class SparkContext(
   }
 
   def smallFiles(path: String, minSplits: Int = defaultMinSplits): RDD[(String, String)] = {
-    hadoopFile(path, classOf[SmallFilesInputFormat], classOf[FileLineWritable], classOf[Text],
+    hadoopFile(path, classOf[SmallTextFilesInputFormat], classOf[FileLineWritable], classOf[Text],
       minSplits).map(pair => (pair._1.toString, pair._2.toString))
   }
 
