@@ -169,7 +169,7 @@ object MLUtils {
     val wordMap = new Index
     val docMap = new Index
 
-    sc.smallFiles(dir, miniSplit).collect().foreach {
+    sc.smallTextFiles(dir, miniSplit).collect().foreach {
       case (a, b) => println(s"key is $a, value is $b")
     }
 
