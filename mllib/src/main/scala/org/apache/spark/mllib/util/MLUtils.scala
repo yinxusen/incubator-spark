@@ -169,7 +169,7 @@ object MLUtils {
     val wordMap = new Index
     val docMap = new Index
 
-    sc.smallTextFiles(dir, miniSplit).map(_._2).collect().foreach {
+    sc.smallTextFiles(dir, miniSplit).map(_._1).collect().foreach {
       x => println(s"key is $x")
     }
 
