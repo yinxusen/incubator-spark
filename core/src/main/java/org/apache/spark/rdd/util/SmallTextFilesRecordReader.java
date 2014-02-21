@@ -97,8 +97,10 @@ public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable
         }
 
         if (totalLength < totalContent.length()) {
-            value.set(totalContent.delete(totalLength, totalContent.length()).toString());
+            totalContent.delete(totalLength, totalContent.length());
         }
+
+        value.set(totalContent.toString());
 
         return newSize != 0;
     }

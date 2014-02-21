@@ -348,13 +348,12 @@ class SparkContext(
 
   def smallTextFiles(path: String, minSplits: Int = defaultMinSplits): RDD[(String, String)] = {
     hadoopFile(path, classOf[SmallTextFilesInputFormat], classOf[FileLineWritable], classOf[Text],
-      minSplits).map{
-        case (k, v) => (k.toString, v.toString)
+      minSplits)
+      .map{case (k, v) => (k, v.toString)}
+      .groupBy(_._1.fileName)
+      .map { case (k, v) =>
+        (k, v.map { case (f, t) => (f.offset, t) }.sortBy(_._1).map(_._2).mkString)
     }
-  }
-
-  def smallTextFilesDefraggler(files: RDD[(String, String)]): RDD[(String, String)] = {
-    files.groupBy(_._1)
   }
 
   /**

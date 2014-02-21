@@ -20,12 +20,12 @@ package org.apache.spark.rdd.util;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.Serializable;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
-public class FileLineWritable
-    implements WritableComparable<FileLineWritable> {
+public class FileLineWritable implements WritableComparable<FileLineWritable>, Serializable {
     public long offset;
     public String fileName;
 

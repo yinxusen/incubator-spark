@@ -50,9 +50,9 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
     System.clearProperty("spark.driver.port")
   }
 
-  private def createInputs(fs: FileSystem, inputDir: Path, fileName: String) = {
+  private def createFile(fs: FileSystem, inputDir: Path, fileName: String, size: Int) = {
     val out: DataOutputStream = fs.create(new Path(inputDir, fileName), true, 4096, 2, 512, null);
-    for (i <- 0 to 1000) {
+    for (i <- 0 to size) {
       out.writeChars(s"Hello - $i\n")
     }
     out.close();
@@ -64,22 +64,35 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
     val fs: FileSystem = dfs.getFileSystem
     val dir = "/foo/"
     val inputDir: Path = new Path(dir)
-    val fileName = "part-00000"
-    createInputs(fs, inputDir, fileName)
+    val fileNames = Array("part-00000", "part-00001", "part-00002")
+    val fileSizes = Array(1000, 100, 10)
+
+    fileNames.zip(fileSizes).foreach {
+      case (fname, size) =>
+        createFile(fs, inputDir, fname, size)
+    }
+
     println(s"name node is ${dfs.getNameNode.getNameNodeAddress.getHostName}")
     println(s"name node port is ${dfs.getNameNodePort}")
-    val hdfsAddressDir = s"hdfs://${dfs.getNameNode.getNameNodeAddress.getHostName}:${dfs.getNameNodePort}${dir}"
+
+    val hdfsAddressDir =
+      s"hdfs://${dfs.getNameNode.getNameNodeAddress.getHostName}:${dfs.getNameNodePort}${dir}"
     println(s"HDFS address dir is ${hdfsAddressDir}")
-    val res2 = sc.textFile(hdfsAddressDir, 2).collect()
-    for (s <- res2) {
-      println(s)
-    }
+
     val res = sc.smallTextFiles(hdfsAddressDir, 2).collect()
-    println(res.size)
-    for (s <- res) {
-      println(s._1)
-      println(s._2)
+
+    assert(res.size == fileNames.size)
+
+    val fileNameSet = res.map(_._1).toSet
+
+    for (fname <- fileNames) {
+      assert(fileNameSet.contains(fname))
     }
-    assert(res.head == fileName)
   }
+
+  test("Small file input || native disk IO") {
+
+  }
+
+
 }
