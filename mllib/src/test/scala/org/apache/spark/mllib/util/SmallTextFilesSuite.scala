@@ -18,23 +18,21 @@
 package org.apache.spark.mllib.util
 
 
+import java.io.PrintWriter
+import java.io.DataOutputStream
+import java.nio.file.Files
+import java.nio.file.{Path => JPath}
+import java.nio.file.{Paths => JPaths}
+
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.FunSuite
-
-import org.apache.spark.SparkContext
 
 import org.apache.hadoop.hdfs.MiniDFSCluster
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
-import java.nio.file.{Path => JPath}
-import java.nio.file.{Paths => JPaths}
-
-import java.io.{InputStreamReader, BufferedReader, PrintWriter, DataOutputStream}
-
-import java.nio.file.Files
-
 import org.apache.hadoop.conf.Configuration
 
+import org.apache.spark.SparkContext
 
 class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
   private var sc: SparkContext = _
@@ -66,6 +64,12 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
   }
 
 
+  /**
+   * This code will test the behaviors on HDFS.
+   * There are two aspects to test:
+   * First is all files are read.
+   * Second is the fileNames are read correctly.
+   */
   test("Small file input || HDFS IO") {
     val fs: FileSystem = dfs.getFileSystem
     val dir = "/foo/"
@@ -105,6 +109,12 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
     println("Wrote native file")
   }
 
+  /**
+   * This code will test the behaviors on native file system.
+   * There are two aspects to test:
+   * First is all files are read.
+   * Second is the fileNames are read correctly.
+   */
   test("Small file input || native disk IO") {
     val dir = Files.createTempDirectory("smallfiles")
     println(s"native disk address is ${dir.toString}")

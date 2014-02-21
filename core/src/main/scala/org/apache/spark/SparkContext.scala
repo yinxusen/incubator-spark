@@ -346,6 +346,16 @@ class SparkContext(
       minSplits).map(pair => pair._2.toString)
   }
 
+  /**
+   * Read a bunch of small files from HDFS, or a local file system (available on all nodes),
+   * or any Hadoop-supported file system URI, and return and RDD of Tuple_2(String, String).
+   * @param path The directory you should specified, such as
+   *             hdfs://[yourAddress]:[yourPort]/[yourDir]
+   * @param minSplits Your suggestion of mini-split
+   * @return RDD[(fileName, content)]
+   *         i.e. the first is a file name of some small file, the second one is its content,
+   *         which is flattened as a String
+   */
   def smallTextFiles(path: String, minSplits: Int = defaultMinSplits): RDD[(String, String)] = {
     hadoopFile(path, classOf[SmallTextFilesInputFormat], classOf[FileLineWritable], classOf[Text],
       minSplits)

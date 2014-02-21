@@ -17,16 +17,17 @@ package org.apache.spark.rdd.util;
  * limitations under the License.
  */
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.util.LineReader;
-import org.apache.hadoop.fs.FileSystem;
-import java.io.IOException;
 
 public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable, Text> {
     private long startOffset;
@@ -81,6 +82,13 @@ public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable
         return new Text();
     }
 
+    /**
+     * We will read an entire block here.
+     * Note that if there are some files, which are large than the block size of HDFS,
+     * are cut by HDFS, then there will be some fragments.
+     * We should preserve all file names and offset in each block,
+     * to recovery an entire file.
+     */
     @Override
     public boolean next(FileLineWritable key, Text value) throws IOException {
         key.fileName = path.getName();
