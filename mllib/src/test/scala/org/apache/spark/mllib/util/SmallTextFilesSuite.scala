@@ -26,8 +26,12 @@ import org.apache.spark.SparkContext
 import org.apache.hadoop.hdfs.MiniDFSCluster
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.Path
+import java.nio.file.{Path => JPath}
+import java.nio.file.{Paths => JPaths}
 
-import java.io.DataOutputStream
+import java.io.{PrintWriter, DataOutputStream}
+
+import java.nio.file.Files
 
 import org.apache.hadoop.conf.Configuration
 
@@ -50,13 +54,13 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
     System.clearProperty("spark.driver.port")
   }
 
-  private def createFile(fs: FileSystem, inputDir: Path, fileName: String, size: Int) = {
+  private def createHDFSFile(fs: FileSystem, inputDir: Path, fileName: String, size: Int) = {
     val out: DataOutputStream = fs.create(new Path(inputDir, fileName), true, 4096, 2, 512, null);
     for (i <- 0 to size) {
       out.writeChars(s"Hello - $i\n")
     }
     out.close();
-    System.out.println("Wrote file")
+    System.out.println("Wrote HDFS file")
   }
 
 
@@ -69,7 +73,7 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
 
     fileNames.zip(fileSizes).foreach {
       case (fname, size) =>
-        createFile(fs, inputDir, fname, size)
+        createHDFSFile(fs, inputDir, fname, size)
     }
 
     println(s"name node is ${dfs.getNameNode.getNameNodeAddress.getHostName}")
@@ -90,9 +94,40 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
     }
   }
 
-  test("Small file input || native disk IO") {
-
+  private def createNativeFile(inputDir: JPath, fileName: String, size: Int) = {
+    val out = new PrintWriter(s"${inputDir.toString}/$fileName")
+    for (i <- 0 to size) {
+      out.println(s"Hello - $i")
+    }
+    out.close()
+    println("Wrote native file")
   }
 
+  test("Small file input || native disk IO") {
+    val dir = Files.createTempDirectory("smallfiles")
+    println(s"native disk address is ${dir.toString}")
+    val fileNames = Array("part-00000", "part-00001", "part-00002")
+    val fileSizes = Array(1000, 100, 10)
+
+    fileNames.zip(fileSizes).foreach {
+      case (fname, size) =>
+        createNativeFile(dir, fname, size)
+    }
+
+    val res = sc.smallTextFiles(dir.toString, 2).collect()
+
+    assert(res.size == fileNames.size)
+
+    val fileNameSet = res.map(_._1).toSet
+
+    for (fname <- fileNames) {
+      assert(fileNameSet.contains(fname))
+    }
+
+    fileNames.foreach { fname =>
+      Files.deleteIfExists(JPaths.get(s"${dir.toString}/$fname"))
+    }
+    Files.deleteIfExists(dir)
+  }
 
 }
