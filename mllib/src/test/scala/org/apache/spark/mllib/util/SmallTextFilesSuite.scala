@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.Path
 import java.nio.file.{Path => JPath}
 import java.nio.file.{Paths => JPaths}
 
-import java.io.{PrintWriter, DataOutputStream}
+import java.io.{InputStreamReader, BufferedReader, PrintWriter, DataOutputStream}
 
 import java.nio.file.Files
 
@@ -43,6 +43,7 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
 
   override def beforeAll() {
     sc = new SparkContext("local", "test")
+    conf.set("dfs.datanode.data.dir.perm", "775")
     dfs = new MiniDFSCluster(conf, 4, true,
                              Array("/rack0", "/rack0", "/rack1", "/rack1"),
                              Array("host0", "host1", "host2", "host3"))
@@ -53,6 +54,7 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
     sc.stop()
     System.clearProperty("spark.driver.port")
   }
+
 
   private def createHDFSFile(fs: FileSystem, inputDir: Path, fileName: String, size: Int) = {
     val out: DataOutputStream = fs.create(new Path(inputDir, fileName), true, 4096, 2, 512, null);
