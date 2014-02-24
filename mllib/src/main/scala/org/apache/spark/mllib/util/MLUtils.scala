@@ -17,6 +17,8 @@
 
 package org.apache.spark.mllib.util
 
+import org.apache.hadoop.io.Text
+
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext._
@@ -119,5 +121,40 @@ object MLUtils {
       i += 1
     }
     sum
+  }
+
+  /**
+   * Read a bunch of small files from HDFS, or a local file system (available on all nodes),
+   * or any Hadoop-supported file system URI, and return and RDD of Tuple_2(String, String).
+   * @param path The directory you should specified, such as
+   *             hdfs://[yourAddress]:[yourPort]/[yourDir]
+   * @param minSplits Your suggestion of mini-split
+   * @return RDD[(fileName, content)]
+   *         i.e. the first is a file name of some small file, the second one is its content,
+   *         which is flattened as a String
+   */
+  def smallTextFiles(sc: SparkContext, path: String, minSplits: Int): RDD[(String, String)] = {
+    val fileBlocks = sc.hadoopFile(
+      path,
+      classOf[SmallTextFilesInputFormat],
+      classOf[BlockwiseTextWritable],
+      classOf[Text],
+      minSplits)
+      .map { case (block, text) => block.fileName -> (block.offset, text.toString) }
+
+    val multiBlockFiles = fileBlocks.filter(_._2._1 > 0).map(_._1).distinct().collect().toSet
+
+    val broadcastMultiBlockFiles = sc.broadcast(multiBlockFiles)
+
+    val singleFiles = fileBlocks
+      .filter(x => ! broadcastMultiBlockFiles.value.contains(x._1))
+      .mapValues(_._2)
+
+    val multiFiles = fileBlocks
+      .filter(x => broadcastMultiBlockFiles.value.contains(x._1))
+      .groupByKey()
+      .mapValues(_.sortBy(_._1).map(_._2).mkString)
+
+    singleFiles.union(multiFiles)
   }
 }
