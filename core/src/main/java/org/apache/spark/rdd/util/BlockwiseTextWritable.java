@@ -1,5 +1,3 @@
-package org.apache.spark.rdd.util;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -17,63 +15,63 @@ package org.apache.spark.rdd.util;
  * limitations under the License.
  */
 
+package org.apache.spark.rdd.util;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.Serializable;
 
+import com.sun.istack.internal.NotNull;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
-public class FileLineWritable implements WritableComparable<FileLineWritable>, Serializable {
-    public long offset;
+public class BlockwiseTextWritable implements WritableComparable<BlockwiseTextWritable> {
     public String fileName;
 
+    public long offset;
+
     public void readFields(DataInput in) throws IOException {
-        this.offset = in.readLong();
         this.fileName = Text.readString(in);
+        this.offset = in.readLong();
     }
 
     public void write(DataOutput out) throws IOException {
-        out.writeLong(offset);
         Text.writeString(out, fileName);
+        out.writeLong(offset);
     }
 
-    public int compareTo(FileLineWritable that) {
+    public int compareTo(@NotNull BlockwiseTextWritable that) {
         int cmp = this.fileName.compareTo(that.fileName);
-        if (cmp != 0) return cmp;
-        return (int)Math.signum((double)(this.offset - that.offset));
+        if (cmp != 0) {
+            return cmp;
+        } else {
+            return (int)(this.offset - that.offset);
+        }
     }
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((fileName == null) ? 0 : fileName.hashCode());
-        result = prime * result + (int) (offset ^ (offset >>> 32));
-        return result;
+        return fileName.hashCode() ^ (int)(offset ^ (offset >>> 32));
     }
 
     @Override
     public boolean equals(Object obj) {
         if (this == obj)
             return true;
-        if (obj == null)
+
+        if (obj == null || obj instanceof BlockwiseTextWritable)
             return false;
-        if (getClass() != obj.getClass())
-            return false;
-        FileLineWritable other = (FileLineWritable) obj;
-        if (fileName == null) {
-            if (other.fileName != null)
-                return false;
-        } else if (!fileName.equals(other.fileName)) {
-            return false;
+
+        BlockwiseTextWritable other = (BlockwiseTextWritable) obj;
+
+        if (fileName == null || other.fileName == null) {
+            return fileName == null && other.fileName == null;
+        } else {
+            return fileName.equals(other.fileName) && offset == other.offset;
         }
-        return offset == other.offset;
     }
 
     public String toString() {
         return fileName;
     }
-
 }

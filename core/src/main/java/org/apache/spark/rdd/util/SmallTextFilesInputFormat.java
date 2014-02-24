@@ -1,6 +1,3 @@
-package org.apache.spark.rdd.util;
-
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,35 +15,38 @@ package org.apache.spark.rdd.util;
  * limitations under the License.
  */
 
+package org.apache.spark.rdd.util;
+
 import java.io.IOException;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.RecordReader;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.CombineFileInputFormat;
 import org.apache.hadoop.mapred.lib.CombineFileRecordReader;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
 
-public class SmallTextFilesInputFormat extends
-        CombineFileInputFormat<FileLineWritable, Text> {
+public class SmallTextFilesInputFormat
+        extends CombineFileInputFormat<BlockwiseTextWritable, Text> {
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
     @Override
-    public RecordReader<FileLineWritable, Text> getRecordReader(
+    public RecordReader<BlockwiseTextWritable, Text> getRecordReader(
             InputSplit split,
             JobConf conf,
             Reporter reporter) throws IOException {
-        return new CombineFileRecordReader(
+        return new CombineFileRecordReader<BlockwiseTextWritable, Text>(
                 conf,
-                (CombineFileSplit) split,
+                (CombineFileSplit)split,
                 reporter,
-                (Class) SmallTextFilesRecordReader.class);
+                (Class)SmallTextFilesRecordReader.class);
     }
 
     @Override
     protected boolean isSplitable(FileSystem fs, Path filename) {
         return false;
     }
-
 }

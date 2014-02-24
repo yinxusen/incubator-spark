@@ -1,5 +1,3 @@
-package org.apache.spark.rdd.util;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -17,6 +15,8 @@ package org.apache.spark.rdd.util;
  * limitations under the License.
  */
 
+package org.apache.spark.rdd.util;
+
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -29,7 +29,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.util.LineReader;
 
-public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable, Text> {
+public class SmallTextFilesRecordReader implements RecordReader<BlockwiseTextWritable, Text> {
     private long startOffset;
     private long end;
     private long pos;
@@ -43,7 +43,7 @@ public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable
             Configuration conf,
             Reporter reporter,
             Integer index)
-            throws IOException{
+            throws IOException {
         path = split.getPath(index);
         startOffset = split.getOffset(index);
         pos = startOffset;
@@ -74,8 +74,8 @@ public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable
         return Math.min(1.0f, (pos - startOffset) / (float) (end - startOffset));
     }
 
-    public FileLineWritable createKey() {
-        return new FileLineWritable();
+    public BlockwiseTextWritable createKey() {
+        return new BlockwiseTextWritable();
     }
 
     public Text createValue() {
@@ -90,26 +90,31 @@ public class SmallTextFilesRecordReader implements RecordReader<FileLineWritable
      * to recovery an entire file.
      */
     @Override
-    public boolean next(FileLineWritable key, Text value) throws IOException {
+    public boolean next(BlockwiseTextWritable key, Text value) throws IOException {
         key.fileName = path.getName();
         key.offset = pos;
         value.clear();
-        StringBuilder totalContent = new StringBuilder();
-        int newSize = 0;
-        Text buffer = new Text();
-        while (pos < end) {
-            newSize = reader.readLine(buffer);
-            totalContent.append(buffer.toString());
-            totalContent.append(' ');
-            pos += newSize;
+
+        if (pos >= end) {
+            return false;
         }
 
+        StringBuilder totalContent = new StringBuilder();
+        Text buffer = new Text();
+
+        while (pos < end) {
+            pos += reader.readLine(buffer);
+            totalContent.append(buffer.toString());
+            totalContent.append('\n');
+        }
+
+        // TODO describe edge case here
         if (totalLength < totalContent.length()) {
             totalContent.delete(totalLength, totalContent.length());
         }
 
         value.set(totalContent.toString());
 
-        return newSize != 0;
+        return true;
     }
 }

@@ -347,26 +347,6 @@ class SparkContext(
   }
 
   /**
-   * Read a bunch of small files from HDFS, or a local file system (available on all nodes),
-   * or any Hadoop-supported file system URI, and return and RDD of Tuple_2(String, String).
-   * @param path The directory you should specified, such as
-   *             hdfs://[yourAddress]:[yourPort]/[yourDir]
-   * @param minSplits Your suggestion of mini-split
-   * @return RDD[(fileName, content)]
-   *         i.e. the first is a file name of some small file, the second one is its content,
-   *         which is flattened as a String
-   */
-  def smallTextFiles(path: String, minSplits: Int = defaultMinSplits): RDD[(String, String)] = {
-    hadoopFile(path, classOf[SmallTextFilesInputFormat], classOf[FileLineWritable], classOf[Text],
-      minSplits)
-      .map{case (k, v) => (k, v.toString)}
-      .groupBy(_._1.fileName)
-      .map { case (k, v) =>
-        (k, v.map { case (f, t) => (f.offset, t) }.sortBy(_._1).map(_._2).mkString)
-    }
-  }
-
-  /**
    * Get an RDD for a Hadoop-readable dataset from a Hadoop JobConf given its InputFormat and other
    * necessary info (e.g. file name for a filesystem-based dataset, table name for HyperTable),
    * using the older MapReduce API (`org.apache.hadoop.mapred`).
@@ -757,8 +737,8 @@ class SparkContext(
           // A JAR file which exists only on the driver node
           case null | "file" =>
             if (SparkHadoopUtil.get.isYarnMode() && master == "yarn-standalone") {
-              // In order for this to work in yarn standalone mode the user must specify the 
-              // --addjars option to the client to upload the file into the distributed cache 
+              // In order for this to work in yarn standalone mode the user must specify the
+              // --addjars option to the client to upload the file into the distributed cache
               // of the AM to make it show up in the current working directory.
               val fileName = new Path(uri.getPath).getName()
               try {
@@ -766,7 +746,7 @@ class SparkContext(
               } catch {
                 case e: Exception => {
                   // For now just log an error but allow to go through so spark examples work.
-                  // The spark examples don't really need the jar distributed since its also 
+                  // The spark examples don't really need the jar distributed since its also
                   // the app jar.
                   logError("Error adding jar (" + e + "), was the --addJars option used?")
                   null

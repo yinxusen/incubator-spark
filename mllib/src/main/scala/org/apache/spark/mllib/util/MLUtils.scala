@@ -26,6 +26,8 @@ import org.jblas.DoubleMatrix
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.clustering.Document
 import scala.collection.mutable.ArrayBuffer
+import org.apache.spark.rdd.util.{BlockwiseTextWritable, SmallTextFilesInputFormat}
+import org.apache.hadoop.io.Text
 
 /**
  * Helper methods to load, save and pre-process data used in ML Lib.
@@ -150,7 +152,7 @@ object MLUtils {
     def apply(s: String): Int = {
       container.get(s) match {
         case Some(v) => v
-        case None => 
+        case None =>
           container += (s -> lastNumber)
           lastNumber += 1
           lastNumber - 1
@@ -169,7 +171,7 @@ object MLUtils {
     val wordMap = new Index
     val docMap = new Index
 
-    sc.smallTextFiles(dir, miniSplit).map(_._1).collect().foreach {
+    smallTextFiles(sc, dir, miniSplit).map(_._1).collect().foreach {
       x => println(s"key is $x")
     }
 
@@ -208,5 +210,29 @@ object MLUtils {
       Document(fileIdx, content.toArray)
     }
     (data, wordMap, docMap)
+  }
+
+  /**
+   * Read a bunch of small files from HDFS, or a local file system (available on all nodes),
+   * or any Hadoop-supported file system URI, and return and RDD of Tuple_2(String, String).
+   * @param path The directory you should specified, such as
+   *             hdfs://[yourAddress]:[yourPort]/[yourDir]
+   * @param minSplits Your suggestion of mini-split
+   * @return RDD[(fileName, content)]
+   *         i.e. the first is a file name of some small file, the second one is its content,
+   *         which is flattened as a String
+   */
+  def smallTextFiles(sc: SparkContext, path: String, minSplits: Int): RDD[(String, String)] = {
+    val x = sc.hadoopFile(path, classOf[SmallTextFilesInputFormat], classOf[BlockwiseTextWritable], classOf[Text], minSplits)
+              .map { case (block, text) => block.fileName -> (block.offset, text.toString) }
+
+    val y = x.filter(_._2._1 == 0)
+
+    val z = x.filter(_._2._1 > 0)
+
+    sc.hadoopFile(path, classOf[SmallTextFilesInputFormat], classOf[BlockwiseTextWritable], classOf[Text], minSplits)
+      .mapValues(_.toString)
+      .groupBy(_._1.fileName)
+      .mapValues(_.map { case (f, t) => (f.offset, t) }.sortBy(_._1).map(_._2).mkString)
   }
 }
