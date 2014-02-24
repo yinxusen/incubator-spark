@@ -226,7 +226,7 @@ object MLUtils {
       minSplits)
       .map { case (block, text) => block.fileName -> (block.offset, text.toString) }
 
-    val multiBlockFiles = fileBlocks.filter(_._2._1 > 0).map(_._1).distinct.collect.toSet
+    val multiBlockFiles = fileBlocks.filter(_._2._1 > 0).map(_._1).distinct().collect().toSet
 
     val broadcastMultiBlockFiles = sc.broadcast(multiBlockFiles)
 
@@ -236,7 +236,7 @@ object MLUtils {
 
     val multiFiles = fileBlocks
       .filter(x => broadcastMultiBlockFiles.value.contains(x._1))
-      .groupByKey
+      .groupByKey()
       .mapValues(_.sortBy(_._1).map(_._2).mkString)
 
     singleFiles.union(multiFiles)

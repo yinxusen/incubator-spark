@@ -56,11 +56,11 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
 
 
   private def createHDFSFile(fs: FileSystem, inputDir: Path, fileName: String, size: Int) = {
-    val out: DataOutputStream = fs.create(new Path(inputDir, fileName), true, 4096, 2, 512, null);
+    val out: DataOutputStream = fs.create(new Path(inputDir, fileName), true, 4096, 2, 512, null)
     for (i <- 0 to size) {
       out.writeChars(s"Hello - $i\n")
     }
-    out.close();
+    out.close()
     System.out.println("Wrote HDFS file")
   }
 
@@ -87,8 +87,8 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
     println(s"name node port is ${dfs.getNameNodePort}")
 
     val hdfsAddressDir =
-      s"hdfs://${dfs.getNameNode.getNameNodeAddress.getHostName}:${dfs.getNameNodePort}${dir}"
-    println(s"HDFS address dir is ${hdfsAddressDir}")
+      s"hdfs://${dfs.getNameNode.getNameNodeAddress.getHostName}:${dfs.getNameNodePort}$dir"
+    println(s"HDFS address dir is $hdfsAddressDir")
 
     val res = smallTextFiles(sc, hdfsAddressDir, 2).collect()
 
