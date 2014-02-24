@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.spark.rdd.util;
+package org.apache.spark.mllib.util;
 
 import java.io.DataInput;
 import java.io.DataOutput;

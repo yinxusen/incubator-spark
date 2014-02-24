@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.conf.Configuration
 
 import org.apache.spark.SparkContext
+import org.apache.spark.mllib.util.MLUtils._
 
 class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
   private var sc: SparkContext = _
@@ -89,7 +90,7 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
       s"hdfs://${dfs.getNameNode.getNameNodeAddress.getHostName}:${dfs.getNameNodePort}${dir}"
     println(s"HDFS address dir is ${hdfsAddressDir}")
 
-    val res = sc.smallTextFiles(hdfsAddressDir, 2).collect()
+    val res = smallTextFiles(sc, hdfsAddressDir, 2).collect()
 
     assert(res.size == fileNames.size)
 
@@ -126,7 +127,7 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
         createNativeFile(dir, fname, size)
     }
 
-    val res = sc.smallTextFiles(dir.toString, 2).collect()
+    val res = smallTextFiles(sc, dir.toString, 2).collect()
 
     assert(res.size == fileNames.size)
 

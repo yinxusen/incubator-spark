@@ -51,8 +51,6 @@ import org.apache.spark.ui.SparkUI
 import org.apache.spark.util.{Utils, TimeStampedHashMap, MetadataCleaner, MetadataCleanerType,
   ClosureCleaner}
 
-import org.apache.spark.rdd.util._
-
 /**
  * Main entry point for Spark functionality. A SparkContext represents the connection to a Spark
  * cluster, and can be used to create RDDs, accumulators and broadcast variables on that cluster.

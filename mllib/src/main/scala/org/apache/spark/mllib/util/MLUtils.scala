@@ -26,7 +26,6 @@ import org.jblas.DoubleMatrix
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.clustering.Document
 import scala.collection.mutable.ArrayBuffer
-import org.apache.spark.rdd.util.{BlockwiseTextWritable, SmallTextFilesInputFormat}
 import org.apache.hadoop.io.Text
 
 /**
@@ -171,10 +170,6 @@ object MLUtils {
     val wordMap = new Index
     val docMap = new Index
 
-    smallTextFiles(sc, dir, miniSplit).map(_._1).collect().foreach {
-      x => println(s"key is $x")
-    }
-
     val almostData = sc.textFile(dir, miniSplit).cache()
 
     val stopWords = sc.textFile(dirStopWords, miniSplit).
@@ -223,16 +218,27 @@ object MLUtils {
    *         which is flattened as a String
    */
   def smallTextFiles(sc: SparkContext, path: String, minSplits: Int): RDD[(String, String)] = {
-    val x = sc.hadoopFile(path, classOf[SmallTextFilesInputFormat], classOf[BlockwiseTextWritable], classOf[Text], minSplits)
-              .map { case (block, text) => block.fileName -> (block.offset, text.toString) }
+    val fileBlocks = sc.hadoopFile(
+      path,
+      classOf[SmallTextFilesInputFormat],
+      classOf[BlockwiseTextWritable],
+      classOf[Text],
+      minSplits)
+      .map { case (block, text) => block.fileName -> (block.offset, text.toString) }
 
-    val y = x.filter(_._2._1 == 0)
+    val multiBlockFiles = fileBlocks.filter(_._2._1 > 0).map(_._1).distinct.collect.toSet
 
-    val z = x.filter(_._2._1 > 0)
+    val broadcastMultiBlockFiles = sc.broadcast(multiBlockFiles)
 
-    sc.hadoopFile(path, classOf[SmallTextFilesInputFormat], classOf[BlockwiseTextWritable], classOf[Text], minSplits)
-      .mapValues(_.toString)
-      .groupBy(_._1.fileName)
-      .mapValues(_.map { case (f, t) => (f.offset, t) }.sortBy(_._1).map(_._2).mkString)
+    val singleFiles = fileBlocks
+      .filter(x => ! broadcastMultiBlockFiles.value.contains(x._1))
+      .mapValues(_._2)
+
+    val multiFiles = fileBlocks
+      .filter(x => broadcastMultiBlockFiles.value.contains(x._1))
+      .groupByKey
+      .mapValues(_.sortBy(_._1).map(_._2).mkString)
+
+    singleFiles.union(multiFiles)
   }
 }
