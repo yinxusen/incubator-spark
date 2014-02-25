@@ -17,6 +17,12 @@
 
 package org.apache.spark.mllib.util
 
+import scala.collection.mutable.StringBuilder
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
+
+import org.apache.hadoop.io.Text
+
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext._
@@ -119,5 +125,43 @@ object MLUtils {
       i += 1
     }
     sum
+  }
+
+  /**
+   * Read a bunch of small files from HDFS, or a local file system (available on all nodes),
+   * or any Hadoop-supported file system URI, and return and RDD of Tuple_2(String, String).
+   * @param path The directory you should specified, such as
+   *             hdfs://[address]:[port]/[dir]
+   * @param minSplits Suggested of minimum split number
+   * @return RDD[(fileName, content)]
+   *         i.e. the first is a file name of some small file, the second one is its content.
+   *         Note that all original line breaker will be substituted by '\n'.
+   */
+  def smallTextFiles(sc: SparkContext, path: String, minSplits: Int): RDD[(String, String)] = {
+    val fileBlocks = sc.hadoopFile(
+      path,
+      classOf[SmallTextFilesInputFormat],
+      classOf[BlockwiseTextWritable],
+      classOf[Text],
+      minSplits)
+
+    fileBlocks.mapPartitions { iterator =>
+      var lastFileName = ""
+      val mergedContents = ArrayBuffer.empty[(String, mutable.StringBuilder)]
+
+      for ((block, content) <- iterator) {
+        if (block.fileName == lastFileName) {
+          val (_, lastContent) = mergedContents.last
+          lastContent.append(content.toString)
+        } else {
+          lastFileName = block.fileName
+          mergedContents.append((block.fileName, new mutable.StringBuilder(content.toString)))
+        }
+      }
+
+      mergedContents.map { case (fileName, content) =>
+        (fileName, content.toString())
+      }.iterator
+    }
   }
 }
