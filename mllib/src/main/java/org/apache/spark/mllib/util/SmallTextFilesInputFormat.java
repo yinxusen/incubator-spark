@@ -45,6 +45,12 @@ public class SmallTextFilesInputFormat
                 (Class)SmallTextFilesRecordReader.class);
     }
 
+    /**
+     * We set the splitable of file to false, so as to ensure that
+     * all blocks of any single files keep in the same split.
+     * In this way, hadoopRDD will keep one file in a partition, it is
+     * good for us to join the slices of a single file together.
+     */
     @Override
     protected boolean isSplitable(FileSystem fs, Path filename) {
         return false;

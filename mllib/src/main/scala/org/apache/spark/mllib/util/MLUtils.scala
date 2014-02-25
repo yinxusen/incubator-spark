@@ -25,6 +25,8 @@ import org.apache.spark.SparkContext._
 
 import org.jblas.DoubleMatrix
 import org.apache.spark.mllib.regression.LabeledPoint
+import scala.collection.mutable.StringBuilder
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Helper methods to load, save and pre-process data used in ML Lib.
@@ -140,21 +142,16 @@ object MLUtils {
       classOf[BlockwiseTextWritable],
       classOf[Text],
       minSplits)
-      .map { case (block, text) => block.fileName -> (block.offset, text.toString) }
+      .map { case (block, text) => block.fileName -> text.toString }
 
-    val multiBlockFiles = fileBlocks.filter(_._2._1 > 0).map(_._1).distinct().collect().toSet
-
-    val broadcastMultiBlockFiles = sc.broadcast(multiBlockFiles)
-
-    val singleFiles = fileBlocks
-      .filter(x => ! broadcastMultiBlockFiles.value.contains(x._1))
-      .mapValues(_._2)
-
-    val multiFiles = fileBlocks
-      .filter(x => broadcastMultiBlockFiles.value.contains(x._1))
-      .groupByKey()
-      .mapValues(_.sortBy(_._1).map(_._2).mkString)
-
-    singleFiles.union(multiFiles)
+    fileBlocks.mapPartitions { iterator =>
+      iterator.foldLeft(ArrayBuffer(("", StringBuilder.newBuilder))){ case (container, item) =>
+        if(container.last._1 != item._1) {
+          container.append((item._1, StringBuilder.newBuilder))
+        }
+        container.last._2.append(item._2)
+        container
+      }.tail.map{ x => (x._1, x._2.toString()) }.toIterator
+    }
   }
 }
