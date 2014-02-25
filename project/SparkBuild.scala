@@ -334,7 +334,7 @@ object SparkBuild extends Build {
   def mllibSettings = sharedSettings ++ Seq(
     name := "spark-mllib",
     libraryDependencies ++= Seq(
-      "org.apache.hadoop"        % "hadoop-test"                % hadoopVersion,
+      "org.apache.hadoop"        % "hadoop-test"                % hadoopVersion % "test",
       "org.jblas"                % "jblas"                      % "1.2.3"
     )
   )

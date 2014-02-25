@@ -27,6 +27,7 @@ import org.jblas.DoubleMatrix
 import org.apache.spark.mllib.regression.LabeledPoint
 import scala.collection.mutable.StringBuilder
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
 
 /**
  * Helper methods to load, save and pre-process data used in ML Lib.
@@ -130,7 +131,7 @@ object MLUtils {
    * or any Hadoop-supported file system URI, and return and RDD of Tuple_2(String, String).
    * @param path The directory you should specified, such as
    *             hdfs://[yourAddress]:[yourPort]/[yourDir]
-   * @param minSplits Your suggestion of mini-split
+   * @param minSplits Suggested of minimum split number
    * @return RDD[(fileName, content)]
    *         i.e. the first is a file name of some small file, the second one is its content,
    *         which is flattened as a String
@@ -142,16 +143,24 @@ object MLUtils {
       classOf[BlockwiseTextWritable],
       classOf[Text],
       minSplits)
-      .map { case (block, text) => block.fileName -> text.toString }
 
     fileBlocks.mapPartitions { iterator =>
-      iterator.foldLeft(ArrayBuffer(("", StringBuilder.newBuilder))){ case (container, item) =>
-        if(container.last._1 != item._1) {
-          container.append((item._1, StringBuilder.newBuilder))
+      var lastFileName = ""
+      val mergedContents = ArrayBuffer.empty[(String, mutable.StringBuilder)]
+
+      for ((block, content) <- iterator) {
+        if (block.fileName == lastFileName) {
+          val (_, lastContent) = mergedContents.last
+          lastContent.append(content.toString)
+        } else {
+          lastFileName = block.fileName
+          mergedContents.append((block.fileName, new mutable.StringBuilder(content.toString)))
         }
-        container.last._2.append(item._2)
-        container
-      }.tail.map{ x => (x._1, x._2.toString()) }.toIterator
+      }
+
+      mergedContents.map { case (fileName, content) =>
+        (fileName, content.toString())
+      }.iterator
     }
   }
 }

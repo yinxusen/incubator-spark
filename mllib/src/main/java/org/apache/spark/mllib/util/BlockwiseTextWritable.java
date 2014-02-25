@@ -21,7 +21,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import com.sun.istack.internal.NotNull;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -40,7 +39,8 @@ public class BlockwiseTextWritable implements WritableComparable<BlockwiseTextWr
         out.writeLong(offset);
     }
 
-    public int compareTo(@NotNull BlockwiseTextWritable that) {
+
+    public int compareTo(BlockwiseTextWritable that) {
         int cmp = this.fileName.compareTo(that.fileName);
         if (cmp != 0) {
             return cmp;

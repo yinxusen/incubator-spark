@@ -129,7 +129,7 @@ class SmallTextFilesSuite extends FunSuite with BeforeAndAfterAll {
 
     val res = smallTextFiles(sc, dir.toString, 2).collect()
 
-    assert(res.size == fileNames.size)
+    assert(res.size === fileNames.size)
 
     val fileNameSet = res.map(_._1).toSet
 
