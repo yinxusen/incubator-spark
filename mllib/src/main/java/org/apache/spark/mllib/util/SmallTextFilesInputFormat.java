@@ -30,6 +30,10 @@ import org.apache.hadoop.mapred.lib.CombineFileInputFormat;
 import org.apache.hadoop.mapred.lib.CombineFileRecordReader;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 
+/**
+ * The specific InputFormat reads small text files in HDFS or local disk. It will be called by
+ * HadoopRDD to generate new RecordReader.
+ */
 public class SmallTextFilesInputFormat
         extends CombineFileInputFormat<BlockwiseTextWritable, Text> {
 
@@ -46,10 +50,10 @@ public class SmallTextFilesInputFormat
     }
 
     /**
-     * We set the splitable of file to false, so as to ensure that
-     * all blocks of any single files keep in the same split.
-     * In this way, hadoopRDD will keep one file in a partition, it is
-     * good for us to join the slices of a single file together.
+     * Splitable should be set to false in the context of reading small files, to ensure that all
+     * blocks of a single file keeps in the same split. In this way, HadoopRDD will keep one file
+     * in a partition, which is shuffle-avoid when combining blocks of a file together into an
+     * entire file.
      */
     @Override
     protected boolean isSplitable(FileSystem fs, Path filename) {

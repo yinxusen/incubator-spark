@@ -17,10 +17,6 @@
 
 package org.apache.spark.mllib.util
 
-import scala.collection.mutable.StringBuilder
-import scala.collection.mutable.ArrayBuffer
-import scala.collection.mutable
-
 import org.apache.hadoop.io.Text
 
 import org.apache.spark.SparkContext
@@ -29,6 +25,8 @@ import org.apache.spark.SparkContext._
 
 import org.jblas.DoubleMatrix
 import org.apache.spark.mllib.regression.LabeledPoint
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Helper methods to load, save and pre-process data used in ML Lib.
@@ -128,14 +126,17 @@ object MLUtils {
   }
 
   /**
-   * Read a bunch of small files from HDFS, or a local file system (available on all nodes),
-   * or any Hadoop-supported file system URI, and return and RDD of Tuple_2(String, String).
-   * @param path The directory you should specified, such as
-   *             hdfs://[address]:[port]/[dir]
-   * @param minSplits Suggested of minimum split number
-   * @return RDD[(fileName, content)]
-   *         i.e. the first is a file name of some small file, the second one is its content.
-   *         Note that all original line breaker will be substituted by '\n'.
+   * Reads a bunch of small files from HDFS, or a local file system (available on all nodes), or
+   * any Hadoop-supported file system URI, and return an RDD[(String, String)].
+   *
+   * @param path        The directory you should specified, such as
+   *                    hdfs://[address]:[port]/[dir]
+   *
+   * @param minSplits   Suggested of minimum split number
+   *
+   * @return            RDD[(fileName: String, content: String)]
+   *                    i.e. the first is the file name of a file, the second one is its content.
+   *                    Note that all original line breaker will be substituted by '\n'.
    */
   def smallTextFiles(sc: SparkContext, path: String, minSplits: Int): RDD[(String, String)] = {
     val fileBlocks = sc.hadoopFile(
@@ -147,16 +148,15 @@ object MLUtils {
 
     fileBlocks.mapPartitions { iterator =>
       var lastFileName = ""
-      val mergedContents = ArrayBuffer.empty[(String, mutable.StringBuilder)]
+      val mergedContents = ArrayBuffer.empty[(String, Text)]
 
       for ((block, content) <- iterator) {
-        if (block.fileName == lastFileName) {
-          val (_, lastContent) = mergedContents.last
-          lastContent.append(content.toString)
-        } else {
+        if (block.fileName != lastFileName) {
+          mergedContents.append((block.fileName, new Text()))
           lastFileName = block.fileName
-          mergedContents.append((block.fileName, new mutable.StringBuilder(content.toString)))
         }
+
+        mergedContents.last._2.append(content.getBytes, 0, content.getLength)
       }
 
       mergedContents.map { case (fileName, content) =>

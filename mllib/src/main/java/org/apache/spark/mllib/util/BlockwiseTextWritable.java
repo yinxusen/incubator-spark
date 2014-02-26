@@ -24,6 +24,12 @@ import java.io.IOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
+/**
+ * File names and block offsets must be reserved to reconstruct contents of a file that are larger
+ * than a single HDFS block. BlockwiseTextWritable provides the function, it is used in
+ * SmallTextFilesRecordReader as the key of each block.
+ */
+
 public class BlockwiseTextWritable implements WritableComparable<BlockwiseTextWritable> {
     public String fileName;
 

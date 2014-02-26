@@ -29,6 +29,12 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.CombineFileSplit;
 import org.apache.hadoop.util.LineReader;
 
+/**
+ * A small text files RecordReader, which can read an entire block out. A
+ * <code>BlockwiseTextWritabl</code> as key and <code>Text</code> as value will be returned by the
+ * calling of next() function.
+ */
+
 public class SmallTextFilesRecordReader implements RecordReader<BlockwiseTextWritable, Text> {
     private long startOffset;
     private long end;
@@ -85,13 +91,11 @@ public class SmallTextFilesRecordReader implements RecordReader<BlockwiseTextWri
     }
 
     /**
-     * We will read an entire block here.
-     * Note that if there are some files, which are large than the block size of HDFS,
-     * are cut by HDFS, then there will be some fragments.
-     * We should preserve all file names and offset in each block,
-     * to recovery an entire file.
+     * Reads an entire block contents. Note that files which are larger than the block size of HDFS
+     * are cut by HDFS, then there are some fragments. File names and offsets are keep in the key,
+     * so as to recover entire files later.
      *
-     * Note that '\n' will stand for all other line breaks, such as "\r\n".
+     * Note that '\n' substitutes all other line breaks, such as "\r\n".
      */
     @Override
     public boolean next(BlockwiseTextWritable key, Text value) throws IOException {
@@ -103,43 +107,19 @@ public class SmallTextFilesRecordReader implements RecordReader<BlockwiseTextWri
             return false;
         }
 
-        Text buffer = new Text();
-        Text oneTimeBuffer = new Text();
+        Text blockContent = new Text();
+        Text line = new Text();
 
         while (pos < end) {
-            pos += reader.readLine(oneTimeBuffer);
-            buffer.append(oneTimeBuffer.getBytes(), 0, oneTimeBuffer.getLength());
-            buffer.append(LFs, 0, LFs.length);
+            pos += reader.readLine(line);
+            blockContent.append(line.getBytes(), 0, line.getLength());
+            blockContent.append(LFs, 0, LFs.length);
         }
 
-        // If the totalContent.length() larger than the totalLength, it indicates that
-        // the readLine() function read from the next block for a complete line.
-        // But it is wrong if we do not delete the extra characters. Because the next
-        // block reader will also read these characters.
-        //
-        // For instance (It could not be a practical example, but just for clarification):
-        //
-        // "abcdefg
-        //  higklmn
-        //  opqrst
-        //  uvwxyz"
-        //
-        // If we set the block size to 5 bytes, a line will be splited, it will become
-        //
-        // "abcde
-        //  fg[\n]hi
-        //  jklmn
-        //  opqrs
-        //  t[\n]uvwx
-        //  yz"
-        //
-        // In this case, the first block will read "abcdefg" out, while the second block
-        // will read "fg[\n]higklmn".
-
-        if (totalLength < buffer.getLength()) {
-            value.set(buffer.getBytes(), 0, totalLength);
+        if (totalLength < blockContent.getLength()) {
+            value.set(blockContent.getBytes(), 0, totalLength);
         } else {
-            value.set(buffer.getBytes());
+            value.set(blockContent.getBytes());
         }
 
         return true;
